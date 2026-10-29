@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+const root = new URL('./', import.meta.url);
+const release = JSON.parse(fs.readFileSync(new URL('release.json', root), 'utf8'));
+const target = new URL(`dist/LOT-Tracker-Offline-Web-v${release.version}.html`, root);
+const expected = fs.readFileSync(target);
+execFileSync(process.execPath, [fileURLToPath(new URL('build/build.mjs', root))]);
+assert.deepEqual(fs.readFileSync(target), expected, 'Committed HTML must reproduce exactly');
+console.log('PASS: committed HTML and rebuilt HTML are byte-identical.');

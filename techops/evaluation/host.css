@@ -1,0 +1,58 @@
+/* The existing site's sidebar owns navigation; this document isolates Q-EVAL styles. */
+.app-shell { display:block !important; min-height:100vh; }
+.app-shell > .sidebar { display:none !important; }
+.workspace { margin-left:0 !important; width:100% !important; min-width:0; }
+.topbar { padding:16px 20px; }
+.content { padding:20px; }
+.topbar h1 { font-size:20px; }
+@media(max-width:700px) { .content { padding:12px; } .topbar { padding:12px; } }
+
+/* The site header already carries language, account and sign-out, and the sidebar names the
+   section, so the original Q-EVAL top bar only duplicated them (its language menu also changed
+   this frame alone, out of step with the site). */
+.workspace > .topbar { display:none !important; }
+
+/* Overview toolbar: the original pulls it 66px up into the title row and only stops below a
+   1250px frame. Beside the site sidebar that row also holds the manual-entry and Excel buttons,
+   so on wide screens (frame over 1250px, window about 1520px and up) the search and filter
+   controls covered those buttons. Keep the toolbar on its own line under the title, as narrower
+   screens already show it. */
+.qualification-toolbar { margin-top:0; justify-content:flex-start; flex-wrap:wrap; }
+
+/* The frame is about 280px narrower than the original full-screen layout. */
+.stats-grid, .qualification-kpis { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)) !important; }
+
+/* Evaluation list: the original fixed a 1120px minimum width inside a box that hides overflow,
+   so at 1366/1440 screens the action buttons were cut off and could not be clicked. Let cells
+   wrap, stack the actions two per row and scroll sideways only when truly needed. */
+.table-wrap:has(.evaluation-list-table) { overflow-x:auto !important; }
+.evaluation-list-table.redesigned { min-width:940px !important; }
+.evaluation-list-table.redesigned th,
+.evaluation-list-table.redesigned td { white-space:normal !important; overflow-wrap:anywhere; text-overflow:clip; }
+.evaluation-list-table.redesigned .status { white-space:normal; max-width:100%; }
+.evaluation-list-table.redesigned .row-actions { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px !important; }
+.evaluation-list-table.redesigned .row-actions button { white-space:nowrap; padding:5px 3px; min-width:0; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(1) { width:6% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(2) { width:5.5% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(3) { width:8% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(4) { width:6% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(5) { width:6% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(6) { width:8.5% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(7) { width:8% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(8) { width:8% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(9) { width:5.5% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(10) { width:7.5% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(11) { width:7.5% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(12) { width:8% !important; }
+.evaluation-list-table.redesigned:not(.mass-report-list) th:nth-child(13) { width:15.5% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(1) { width:7% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(2) { width:6% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(3) { width:11% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(4) { width:8% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(5) { width:7% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(6) { width:7% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(7) { width:12% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(8) { width:10% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(9) { width:7% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(10) { width:9% !important; }
+.evaluation-list-table.mass-report-list th:nth-child(11) { width:16% !important; }

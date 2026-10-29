@@ -1,0 +1,7 @@
+# Copy this file to .dev.vars before running `pnpm dev`.
+# This value is for local development only. Never reuse a production secret.
+SETUP_TOKEN=local-development-only
+
+# Optional. Leave unset unless local email delivery needs to be tested.
+# RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# RESET_EMAIL_FROM="제품기술 업무관리 <noreply@example.com>"

@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildHtml } from './build-html.mjs';
+const root = path.dirname(fileURLToPath(import.meta.url));
+const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
+const release = JSON.parse(read('release.json'));
+const html = buildHtml(read, release);
+const directory = path.join(root, 'dist');
+fs.mkdirSync(directory, { recursive: true });
+const output = path.join(directory, 'LOT-Tracker-v' + release.version + '.html');
+fs.writeFileSync(output, html);
+console.log('Built:', output, Buffer.byteLength(html), 'bytes');

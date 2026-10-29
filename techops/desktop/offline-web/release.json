@@ -1,0 +1,22 @@
+{
+  "version": "1.0.6",
+  "releasedAt": "2026-09-25",
+  "changes": [
+    "UUID 파일의 완전한 M010 투입·Split 근거로 5~7자리 000 SMT RUN ID 인식",
+    "SMT 투입 RUN ID별 PMS 정보 요청을 한 건으로 생성하고 자식 LOT 일괄 요청 방지",
+    "TrackIn·TrackOut이 없는 SMT 투입 이력도 보고서와 검증 ZIP 생성"
+  ],
+  "previousChanges": [
+    "v1.0.5: M010-M060 LOT 공정표, 2D 바코드 메타데이터 및 설명형 파일명 지원",
+    "v1.0.4: 상호 Split으로 UUID 부모 LOTID 복원, Merge 방향 판정 및 생성 Split 중복 제거",
+    "v1.0.3: 관측 공정 선택을 화면·Excel·검증 ZIP에 적용",
+    "v1.0.3: HTML의 기존 M121 고정양식 탭과 별도 Excel 제거",
+    "v1.0.2: LOTID 번호 순서만으로 부모 LOT을 추정하는 동작 제거",
+    "v1.0.2: Merge 방향 수정, Split 이력 및 Terminated 상태 보존",
+    "v1.0.2: LOTID 규칙과 향후 SQL 조회 경계 문서화",
+    "v1.0.1: 전달된 HTML 앱 소스를 GitHub에 통합하고 재현 가능한 빌드와 E2E 테스트 추가",
+    "v1.0.1: SheetJS를 저장소와 같은 0.20.3으로 정렬",
+    "v1.0.1: XLS/XLSX RUNID 맵도 메타데이터로 읽어 다중 병합 파일 분석 오류 수정",
+    "v1.0.1: 시작 Split의 원본 근거로 RUNID 연결하고 이미 포함한 맵을 재요청하지 않도록 수정"
+  ]
+}

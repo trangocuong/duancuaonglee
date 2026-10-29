@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { trackingLists } from '../outputs/LOT-Tracker-Offline-Windows-x64/tracking.mjs';
+import { stepOptions } from './engine/lot-step-report.js';
+const relation = (step, relatedLotId, qty, changedQty) => ({ eventName: 'Split', step, relatedLotId, qty, changedQty, dateTime: '2026-09-22 10:00' });
+const base = { lotId: 'LOT-A', relations: [relation('M010', 'RUN-1', '3', '3'), relation('M165', 'CHILD-1', '80', '20')] };
+const first = trackingLists([base]);
+assert.deepEqual(first.missing.map(r => r.id), ['CHILD-1', 'RUN-1']);
+assert.equal(first.matrices['SPLIT LOT 목록'].length, 2);
+assert.equal(first.matrices['SMT RUNID 추적'][1][1], 'RUN-1');
+assert.equal(trackingLists([base, { lotId: 'RUN-1' }, { lotId: 'CHILD-1' }]).missing.length, 0);
+assert.equal(trackingLists([base, { lotId: 'RUN-1', sourceKind: 'PCB split / merge map' }]).missing.length, 2);
+assert.deepEqual(stepOptions([{ steps: { M130: [], M015: [], M010: [], M031: [] } }]), ['SMT', 'M031', 'M130']);
+assert.equal(trackingLists([{ lotId: 'NO-SMT' }]).matrices['SMT RUNID 추적'][1][4], 'RUNID 미확인');
+const source = process.env.LOT_TRACKER_REVIEW_DIR;
+if (source && fs.existsSync(source)) {
+  const app = path.resolve('outputs/LOT-Tracker-Offline-Windows-x64');
+  const output = path.resolve('outputs/validation-review/revised-tracking');
+  fs.mkdirSync(output, { recursive: true });
+  const files = fs.readdirSync(path.join(source, 'inputs')).flatMap(dir => fs.readdirSync(path.join(source, 'inputs', dir)).map(name => path.join(source, 'inputs', dir, name)));
+  const run = spawnSync(path.join(app, 'runtime/node.exe'), ['--permission', '--allow-fs-read=*', '--allow-fs-write=' + output, path.join(app, 'analyze.mjs')], { input: JSON.stringify({ files, output }), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.ok(result.count > 0);
+  assert.equal(result.tabs[0].rows[0][3], 'SMT');
+  const smt = result.tabs.find(t => t.name === 'SMT RUNID 추적');
+  fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(result));
+  console.log(JSON.stringify({ lots: result.count, missingIds: result.missingIds.length, smtCandidates: smt.rows.slice(1).filter(r => r[1]).length, splitRows: result.tabs.find(t => t.name === 'SPLIT LOT 목록').rows.length - 1, processOrder: result.tabs[0].rows[0].filter(Boolean).slice(3) }));
+}
+console.log('PASS: SMT ordering, incoming SMT candidates, outgoing splits, missing IDs, added-file resolution, map-only and unknown RUNID handling.');

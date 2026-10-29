@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "techops-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["preview.mjs"],
+      "port": 8788
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "LOT Tracker",
+  "version": "1.2.9",
+  "releasedAt": "2026-10-05",
+  "status": "integration-preview",
+  "changes": [
+    "YLD 표시: 100% 이상은 소수점 1자리(100.0%), 100% 미만은 2자리(99.57%) — 화면·복사 텍스트·Excel 공통",
+    "Excel은 원본 v3 서식에 있는 0.00% 셀 서식을 사용해 값은 정확한 비율 그대로, 서식 파일은 그대로",
+    "분석 화면을 열지 못하면 미리보기 대신 내려받아 Chrome·Edge로 열라고 안내"
+  ],
+  "sources": {
+    "report": {
+      "remote": "3556caa58dcc4155b1eef87168967d56ed2a27f7",
+      "localCommits": [
+        "baf70a5",
+        "77cf33c"
+      ],
+      "recovery": "Codex local chat file-change records; live PC checkout not accessible"
+    },
+    "trace": {
+      "remote": "0928cf0115c2e73ef13a96855faa1d02afa36950",
+      "localChanges": "process-axis lineage SVG recovered from local chat file-change records"
+    },
+    "windows": {
+      "remoteVersion": "1.0.3",
+      "localVersion": "1.0.4",
+      "decision": "LOT Tracer report already superseded by HTML v1.1.2; native packaging excluded"
+    }
+  }
+}

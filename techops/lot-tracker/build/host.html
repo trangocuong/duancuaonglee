@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOT Tracker v__VERSION__</title>
+<style>
+:root{color-scheme:light dark;--bg:#f3f6fa;--card:#fff;--ink:#172236;--muted:#566579;--line:#dce4ed;--accent:#155cba;--accent-ink:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#121923;--card:#1b2634;--ink:#eef4fb;--muted:#afbed0;--line:#334459;--accent:#78adff;--accent-ink:#101b2b}}
+*{box-sizing:border-box}html,body{height:100%}body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:14px "Malgun Gothic","Segoe UI",sans-serif}
+.app-header{flex:none;background:var(--card);border-bottom:1px solid var(--line);padding:18px 24px 0}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.brand{display:flex;gap:10px;align-items:center}.brand h1{margin:0;font-size:23px;letter-spacing:-.03em}.brand small{font-size:11px;color:var(--muted);font-weight:500;border:1px solid var(--line);border-radius:5px;padding:3px 6px}.tagline{margin:5px 0 0;color:var(--muted);font-size:12px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}button{font:inherit;min-height:36px;padding:7px 13px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);cursor:pointer}button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}button:disabled{opacity:.45;cursor:default}button:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.file-bar{display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;margin:12px 0;color:var(--muted);font-size:12px}#host-status{margin:0;line-height:1.6}#file-details{position:relative}#file-details summary{cursor:pointer;color:var(--accent)}#file-details[open]{flex-basis:100%}
+#shared-files{max-height:128px;overflow:auto;list-style:none;padding:6px 12px;margin:8px 0 0;border:1px solid var(--line);border-radius:7px;background:var(--bg)}#shared-files:empty{display:none}#shared-files li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:4px 0;overflow-wrap:anywhere}#shared-files button{min-height:26px;padding:2px 8px;flex:none;font-size:11px}
+.app-tabs{display:flex;gap:24px;align-items:center}.app-tabs button{border:0;border-radius:0;padding:11px 2px;background:transparent;border-bottom:3px solid transparent;color:var(--muted);font-weight:600}.app-tabs button[aria-selected=true]{border-bottom-color:var(--accent);color:var(--accent)}main{flex:1;min-height:0;display:flex}iframe{display:block;flex:1;width:100%;height:100%;border:0;background:var(--bg)}iframe[hidden]{display:none}
+.lang-switch{display:flex;gap:4px;margin-left:4px}.lang-switch button{min-height:30px;padding:4px 10px;font-size:12px}.lang-switch button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media(max-width:640px){.app-header{padding:14px 12px 0}.brand h1{font-size:20px}.toolbar{width:100%}.toolbar .primary{flex:1}.app-tabs{gap:20px}.file-bar{margin:10px 0}.tagline{font-size:11px}}
+</style>
+</head>
+<body>
+<header class="app-header">
+<div class="header-top">
+<div><div class="brand"><h1>LOT Tracker</h1><small>v__VERSION__</small></div><p class="tagline" data-i18n="tagline">LOT 보고서와 계보 추적</p></div>
+<div class="toolbar">
+<button id="pick-shared" class="primary" disabled data-i18n="pick">MES·PMS 파일 추가</button>
+<input id="shared-input" type="file" accept=".csv,.xls,.xlsx" multiple hidden>
+<button id="clear-shared" disabled data-i18n="clear">선택 초기화</button>
+<div class="lang-switch" role="group" aria-label="언어" data-i18n-label="language"><button type="button" id="lang-ko" lang="ko" aria-pressed="true" disabled>한국어</button><button type="button" id="lang-vi" lang="vi" aria-pressed="false" disabled>Tiếng Việt</button></div>
+</div>
+</div>
+<div class="file-bar"><p id="host-status" role="status" aria-live="polite">준비 중…</p><details id="file-details"><summary><span data-i18n="files">선택 파일</span> <span id="file-count">0</span></summary><ul id="shared-files"></ul></details></div>
+<nav class="app-tabs" role="tablist" aria-label="분석 보기" data-i18n-label="views">
+<button id="report-tab" role="tab" aria-controls="report-pane" aria-selected="true" tabindex="0" data-i18n="report">LOT 보고서</button>
+<button id="trace-tab" role="tab" aria-controls="trace-pane" aria-selected="false" tabindex="-1" data-i18n="trace">계보 추적</button>
+</nav>
+</header>
+<main>
+<iframe id="report-pane" title="LOT 보고서" data-i18n-title="report" role="tabpanel" aria-labelledby="report-tab"></iframe>
+<iframe id="trace-pane" title="계보 추적" data-i18n-title="trace" role="tabpanel" aria-labelledby="trace-tab" hidden></iframe>
+</main>
+<script id="pane-data" type="application/json">__PANE_DATA__</script>
+<script>
+(function () {
+  'use strict';
+  var modes = ['report', 'trace'], selected = new Map(), ready = {}, busy = {};
+  // One screen language for the header and both panes (Korean / Vietnamese).
+  var TEXT = {
+    ko: { tagline: 'LOT 보고서와 계보 추적', pick: 'MES·PMS 파일 추가', clear: '선택 초기화', files: '선택 파일', report: 'LOT 보고서', trace: '계보 추적',
+      language: '언어', views: '분석 보기', remove: '빼기', removeLabel: function (name) { return name + ' 빼기'; },
+      selected: function (count) { return count + '개 파일 선택됨 · 각 보기에서 분석 또는 추적을 실행하세요.'; },
+      limits: 'CSV / XLS / XLSX · 최대 500개 · 파일당 2MB · 전체 128MB',
+      overLimit: '파일 제한을 넘었습니다: 최대 500개, 파일당 2MB, 전체 128MB입니다.', paneFailed: '분석 화면을 열지 못했습니다. 미리보기 창에서 열었다면 파일을 내려받아 Chrome이나 Edge로 여세요.' },
+    vi: { tagline: 'Báo cáo LOT và truy vết phả hệ', pick: 'Thêm tệp MES·PMS', clear: 'Xóa lựa chọn', files: 'Tệp đã chọn', report: 'Báo cáo LOT', trace: 'Truy vết phả hệ',
+      language: 'Ngôn ngữ', views: 'Chế độ xem phân tích', remove: 'Bỏ', removeLabel: function (name) { return 'Bỏ ' + name; },
+      selected: function (count) { return 'Đã chọn ' + count + ' tệp · Hãy chạy phân tích hoặc truy vết ở từng màn hình.'; },
+      limits: 'CSV / XLS / XLSX · tối đa 500 tệp · mỗi tệp 2MB · tổng 128MB',
+      overLimit: 'Vượt giới hạn tệp: tối đa 500 tệp, mỗi tệp 2MB, tổng 128MB.', paneFailed: 'Không mở được màn hình phân tích. Nếu đang mở trong cửa sổ xem trước, hãy tải tệp về rồi mở bằng Chrome hoặc Edge.' }
+  };
+  var LANG_KEY = 'lotTrackerLang', lang = 'ko', notice = null;
+  try { if (localStorage.getItem(LANG_KEY) === 'vi') lang = 'vi'; } catch (error) { /* storage unavailable: Korean */ }
+  function t(key) { return TEXT[lang][key]; }
+  var pick = document.getElementById('pick-shared'), clear = document.getElementById('clear-shared');
+  var input = document.getElementById('shared-input'), status = document.getElementById('host-status');
+  // Panes are reached only by postMessage. A sandboxed viewer (opaque origin) blocks
+  // direct access to frame windows, but still delivers messages and File objects.
+  function post(mode, message) {
+    message.lotTracker = true;
+    document.getElementById(mode + '-pane').contentWindow.postMessage(message, '*');
+  }
+  function paneOf(source) {
+    return modes.filter(function (mode) { return document.getElementById(mode + '-pane').contentWindow === source; })[0];
+  }
+  function locked() { return modes.some(function (mode) { return !ready[mode] || busy[mode]; }); }
+  function controls() {
+    pick.disabled = locked(); input.disabled = locked(); clear.disabled = locked() || !selected.size;
+    ['ko', 'vi'].forEach(function (code) { document.getElementById('lang-' + code).disabled = locked(); });
+    document.querySelectorAll('#shared-files button').forEach(function (button) { button.disabled = locked(); });
+  }
+  window.addEventListener('message', function (event) {
+    var data = event.data, mode = paneOf(event.source);
+    if (!mode || !data || data.lotTracker !== true) return;
+    if (data.type === 'busy') { busy[mode] = data.value === true; controls(); }
+    if (data.type === 'ready' && !ready[mode]) {
+      ready[mode] = true;
+      if (modes.every(function (item) { return ready[item]; })) { applyLang(); render(); }
+    }
+  });
+  function render() {
+    var list = document.getElementById('shared-files'); list.textContent = '';
+    selected.forEach(function (file, name) {
+      var row = document.createElement('li'), remove = document.createElement('button');
+      row.appendChild(document.createTextNode(name + ' (' + (file.size / 1024).toFixed(1) + ' KB)'));
+      remove.textContent = t('remove'); remove.setAttribute('aria-label', t('removeLabel')(name));
+      remove.addEventListener('click', function () {
+        if (locked()) return;
+        selected.delete(name); var files = Array.from(selected.values());
+        modes.forEach(function (mode) { post(mode, { type: 'clear' }); post(mode, { type: 'addFiles', files: files }); });
+        render();
+      });
+      row.appendChild(remove); list.appendChild(row);
+    });
+    notice = null;
+    status.textContent = selected.size ? t('selected')(selected.size) : t('limits');
+    document.getElementById('file-count').textContent = String(selected.size);
+    controls();
+  }
+  function addFiles(files) {
+    if (locked()) return;
+    var next = new Map(selected), added = [];
+    Array.from(files).forEach(function (file) { if (/\.(csv|xls|xlsx)$/i.test(file.name)) { next.set(file.name, file); added.push(file); } });
+    var total = 0, oversized = false;
+    next.forEach(function (file) { total += file.size; if (file.size > 2 * 1024 * 1024) oversized = true; });
+    if (next.size > 500 || oversized || total > 128 * 1024 * 1024) {
+      notice = 'overLimit'; status.textContent = t(notice); return;
+    }
+    selected = next;
+    modes.forEach(function (mode) { post(mode, { type: 'addFiles', files: added }); });
+    render();
+  }
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (element) { element.textContent = t(element.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-label]').forEach(function (element) { element.setAttribute('aria-label', t(element.getAttribute('data-i18n-label'))); });
+    document.querySelectorAll('[data-i18n-title]').forEach(function (element) { element.title = t(element.getAttribute('data-i18n-title')); });
+    ['ko', 'vi'].forEach(function (code) { document.getElementById('lang-' + code).setAttribute('aria-pressed', String(code === lang)); });
+    modes.forEach(function (mode) { if (ready[mode]) post(mode, { type: 'setLang', lang: lang }); });
+  }
+  ['ko', 'vi'].forEach(function (code) {
+    document.getElementById('lang-' + code).addEventListener('click', function () {
+      if (locked() || code === lang) return;
+      lang = code;
+      try { localStorage.setItem(LANG_KEY, lang); } catch (error) { /* the choice lasts for this page only */ }
+      applyLang();
+      if (notice) status.textContent = t(notice); else render();
+    });
+  });
+  pick.addEventListener('click', function () { input.click(); });
+  input.addEventListener('change', function () { addFiles(input.files); input.value = ''; });
+  clear.addEventListener('click', function () {
+    if (locked()) return;
+    selected.clear(); modes.forEach(function (mode) { post(mode, { type: 'clear' }); }); render();
+  });
+  modes.forEach(function (mode) {
+    document.getElementById(mode + '-tab').addEventListener('click', function () {
+      modes.forEach(function (other) {
+        var active = mode === other;
+        document.getElementById(other + '-pane').hidden = !active;
+        document.getElementById(other + '-tab').setAttribute('aria-selected', String(active));
+        document.getElementById(other + '-tab').tabIndex = active ? 0 : -1;
+      });
+    });
+    document.getElementById(mode + '-tab').addEventListener('keydown', function (event) {
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) < 0) return;
+      event.preventDefault();
+      var target = event.key === 'Home' ? 'report' : event.key === 'End' ? 'trace' : mode === 'report' ? 'trace' : 'report';
+      document.getElementById(target + '-tab').click(); document.getElementById(target + '-tab').focus();
+    });
+    var frame = document.getElementById(mode + '-pane');
+    frame.addEventListener('load', function () {
+      // Each pane announces itself when its script is ready; a silent pane failed to start.
+      setTimeout(function () { if (!ready[mode]) { notice = 'paneFailed'; status.textContent = t(notice); } }, 5000);
+    });
+  });
+  var data = JSON.parse(document.getElementById('pane-data').textContent);
+  modes.forEach(function (mode) { document.getElementById(mode + '-pane').srcdoc = data[mode]; });
+})();
+</script>
+</body>
+</html>

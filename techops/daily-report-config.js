@@ -1,0 +1,100 @@
+// 일일보고 설정의 표준 분류. 원본: MDL_SSD_통합관리기준.xlsx
+// 사이트의 기존 파트명과 맞추기 위해 원본의 MDL은 Module로 표시한다.
+export const DAILY_CLASSIFICATION_FIELDS = ["소속부서", "업무구분", "업무유형", "중분류", "소분류"];
+
+export const DAILY_CLASSIFICATION_ROWS = [
+  ["SSD","평가","PGM 평가","PGM/EVAL",null],
+  ["SSD","평가","기타 평가","DOE",null],
+  ["SSD","평가","부적합 승인평가","DOE",null],
+  ["SSD","평가","설비 평가","시양산","신규 설비"],
+  ["SSD","평가","설비 평가","시양산","설비 위치 이동"],
+  ["SSD","평가","설비 평가","PFQ","신규 설비"],
+  ["SSD","평가","설비 평가","PFQ","설비 위치 이동"],
+  ["SSD","평가","설비 평가","DOE","신규 설비"],
+  ["SSD","평가","설비 평가","DOE","설비 위치 이동"],
+  ["SSD","평가","신제품 평가","시양산",null],
+  ["SSD","평가","신제품 평가","PFQ/PRQ",null],
+  ["SSD","평가","신제품 평가","DOE",null],
+  ["SSD","이슈","고객 클레임","세부 내용 직접입력",null],
+  ["SSD","이슈","생산라인 이슈","Interface","PGM"],
+  ["SSD","이슈","생산라인 이슈","Interface","PRODUCT"],
+  ["SSD","이슈","생산라인 이슈","Interface","EQP"],
+  ["SSD","이슈","생산라인 이슈","Interface","SYSTEM"],
+  ["SSD","이슈","생산라인 이슈","ARTs","PGM"],
+  ["SSD","이슈","생산라인 이슈","ARTs","PRODUCT"],
+  ["SSD","이슈","생산라인 이슈","ARTs","EQP"],
+  ["SSD","이슈","생산라인 이슈","ARTs","SYSTEM"],
+  ["SSD","이슈","생산라인 이슈","Aging","PGM"],
+  ["SSD","이슈","생산라인 이슈","Aging","PRODUCT"],
+  ["SSD","이슈","생산라인 이슈","Aging","EQP"],
+  ["SSD","이슈","생산라인 이슈","Aging","SYSTEM"],
+  ["SSD","분석","OCAP 불량 분석","OMS 등록번호",null],
+  ["SSD","분석","저수율 불량 분석","OMS 등록번호",null],
+  ["SSD","과제","KPI 성능지표 개선과제","자동화 시스템","세부 내용 직접입력"],
+  ["SSD","과제","KPI 성능지표 개선과제","공정","세부 내용 직접입력"],
+  ["SSD","과제","KPI 성능지표 개선과제","TAT","세부 내용 직접입력"],
+  ["SSD","과제","KPI 성능지표 개선과제","Interface","세부 내용 직접입력"],
+  ["SSD","과제","KPI 성능지표 개선과제","ARTs","세부 내용 직접입력"],
+  ["SSD","과제","KPI 성능지표 개선과제","Analysis","세부 내용 직접입력"],
+  ["SSD","과제","KPI 성능지표 개선과제","Aging","세부 내용 직접입력"],
+  ["Module","평가","PGM 평가","PGM/EVAL",null],
+  ["Module","평가","기타 평가","DOE",null],
+  ["Module","평가","부적합 승인평가","Qual",null],
+  ["Module","평가","설비 평가","시양산","신규 설비"],
+  ["Module","평가","설비 평가","시양산","설비 위치 이동"],
+  ["Module","평가","설비 평가","PFQ","신규 설비"],
+  ["Module","평가","설비 평가","PFQ","설비 위치 이동"],
+  ["Module","평가","설비 평가","DOE","신규 설비"],
+  ["Module","평가","설비 평가","DOE","설비 위치 이동"],
+  ["Module","평가","신제품 평가","시양산",null],
+  ["Module","평가","신제품 평가","PFQ",null],
+  ["Module","평가","신제품 평가","DOE",null],
+  ["Module","평가","자재 평가","시양산",null],
+  ["Module","평가","자재 평가","PFQ",null],
+  ["Module","평가","자재 평가","DOE",null],
+  ["Module","이슈","고객 클레임","세부 내용 직접입력",null],
+  ["Module","이슈","생산라인 이슈","SPD gate","PGM"],
+  ["Module","이슈","생산라인 이슈","SPD gate","PRODUCT"],
+  ["Module","이슈","생산라인 이슈","SPD gate","EQP"],
+  ["Module","이슈","생산라인 이슈","SPD gate","SYSTEM"],
+  ["Module","이슈","생산라인 이슈","PCT","PGM"],
+  ["Module","이슈","생산라인 이슈","PCT","PRODUCT"],
+  ["Module","이슈","생산라인 이슈","PCT","EQP"],
+  ["Module","이슈","생산라인 이슈","PCT","SYSTEM"],
+  ["Module","이슈","생산라인 이슈","ATE","PGM"],
+  ["Module","이슈","생산라인 이슈","ATE","PRODUCT"],
+  ["Module","이슈","생산라인 이슈","ATE","EQP"],
+  ["Module","이슈","생산라인 이슈","ATE","SYSTEM"],
+  ["Module","분석","OCAP 불량 분석","OMS 등록번호",null],
+  ["Module","분석","저수율 불량 분석","OMS 등록번호",null],
+  ["Module","과제","KPI 성능지표 개선과제","자동화 시스템","세부 내용 직접입력"],
+  ["Module","과제","KPI 성능지표 개선과제","공정","세부 내용 직접입력"],
+  ["Module","과제","KPI 성능지표 개선과제","TAT","세부 내용 직접입력"],
+  ["Module","과제","KPI 성능지표 개선과제","PCT Prime","세부 내용 직접입력"],
+  ["Module","과제","KPI 성능지표 개선과제","ATE Prime","세부 내용 직접입력"],
+  ["Module","과제","KPI 성능지표 개선과제","Analysis","세부 내용 직접입력"],
+];
+
+export const DAILY_WORK_STATUS_DEFINITIONS = [
+  ["WAITING", "대기", "Waiting", "Chờ xử lý"],
+  ["IN_PROGRESS", "진행 중", "In Progress", "Đang tiến hành"],
+  ["DELAYED", "지연", "Delayed", "Chậm tiến độ"],
+  ["RESTRICTED", "진행 제한", "Restricted", "Hạn chế tiến hành"],
+  ["COMPLETED", "완료", "Completed", "Hoàn thành"],
+  ["PLANNED", "예정", "Planned", "Dự kiến"],
+  ["APPROVAL_PENDING", "승인대기", "Approval Pending", "Chờ phê duyệt"],
+  ["REWORK", "재작업", "Rework", "Làm lại"],
+  ["UNDER_REVIEW", "검토 중", "Under Review", "Đang xem xét"],
+  ["ISSUE", "문제 발생", "Issue", "Phát sinh vấn đề"],
+  ["QA_HANDOFF", "QA 인계", "QA Handoff", "Bàn giao QA"],
+];
+
+export function classificationOptions(level) {
+  return [...new Set(DAILY_CLASSIFICATION_ROWS.map((row) => row[level]).filter(Boolean))];
+}
+
+export function isValidClassification(values) {
+  const normalized = values.map((value) => String(value || "").trim());
+  if (!normalized.slice(0, 4).every(Boolean)) return false;
+  return DAILY_CLASSIFICATION_ROWS.some((row) => row.every((value, index) => (value || "") === normalized[index]));
+}

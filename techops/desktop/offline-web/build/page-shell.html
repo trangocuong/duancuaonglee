@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOT Tracker 오프라인 (Web) v__VERSION__</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --border: #d7dbe0;
+    --accent: #2f6fed; --accent-ink: #ffffff; --warn-bg: #fff4e5; --warn-border: #f0b95a;
+    --error: #c62828;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14161a; --card: #1e2126; --text: #e8eaed; --muted: #9aa4b1; --border: #33383f; --warn-bg: #3a2f14; --warn-border: #8a6a1f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Malgun Gothic", "맑은 고딕", -apple-system, "Segoe UI", Arial, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .card.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.secondary { background: transparent; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button:hover:not(:disabled) { filter: brightness(0.97); }
+  input[type=file] { display: none; }
+  #drop-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 18px; text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 10px; transition: background 0.15s, border-color 0.15s; }
+  #drop-zone.drag { background: rgba(47,111,237,0.08); border-color: var(--accent); }
+  #file-list ul { margin: 6px 0 0; padding-left: 18px; max-height: 160px; overflow: auto; font-size: 12.5px; color: var(--muted); }
+  .status { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: rgba(47,111,237,0.08); }
+  .status.error { background: rgba(198,40,40,0.1); color: var(--error); }
+  #tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tab-btn { font-size: 13px; padding: 6px 10px; }
+  .tab-btn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .table-wrap { overflow: auto; max-height: 520px; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; white-space: pre; }
+  th, td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; vertical-align: top; }
+  thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+  details { margin-top: 8px; }
+  .tsv-box { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 12px; margin-top: 6px; }
+  .copy-status { margin-left: 8px; font-size: 12px; color: var(--muted); }
+  .process-picker { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .process-options { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 8px 0; }
+  .process-options label { display: inline-flex; align-items: center; gap: 4px; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(47,111,237,0.12); color: var(--accent); font-size: 11.5px; font-weight: 600; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>LOT Tracker 오프라인 <span class="badge">v__VERSION__ · Web</span></h1>
+  <p class="subtitle">인터넷 · 설치 · 로그인 필요 없음 · 이 파일 하나로 동작 · 어떤 파일도 외부로 전송하지 않습니다</p>
+
+  <div class="card">
+    <h2>1. See LOT 파일 선택</h2>
+    <p class="muted">CSV / XLS / XLSX 파일을 여러 개 선택하세요. 일반 파일명은 LOTID로 사용하고, 보안 다운로드 UUID 파일명은 ASSYLOT·상호 Split 이력으로 실제 LOTID를 판별합니다.
+    PCB 분할/병합 맵 파일과 RUNID CSV(LOT_ID/PROD_ID/MERGE_LOT 형식)도 함께 선택할 수 있습니다. Cancel 회차를 제외하고 공정 이력·불량·수율·후속 추적 LOT·최신 상태를 계산합니다. 완전한 M010 투입·Split 근거가 있는 UUID 파일은 SMT 투입 RUN ID로 인식하고 PMS 정보 확인을 요청합니다.
+    최대 500개, 파일당 2MB, 전체 128MB.</p>
+    <div id="drop-zone">여기로 파일을 끌어다 놓거나, 아래 버튼으로 선택하세요</div>
+    <div class="row">
+      <label for="file-input"><button type="button" class="primary" onclick="document.getElementById('file-input').click()">See LOT 파일 선택</button></label>
+      <input type="file" id="file-input" multiple accept=".csv,.xls,.xlsx">
+      <input type="file" id="add-file-input" multiple accept=".csv,.xls,.xlsx">
+      <button type="button" id="add-files-btn" class="secondary">추적 파일 추가</button>
+      <button type="button" id="clear-btn" class="secondary">전체 초기화</button>
+      <button type="button" id="analyze-btn" class="primary">분석 · 보고서 만들기</button>
+    </div>
+    <div id="status" class="status">준비됨</div>
+    <div id="file-list" class="muted" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 결과</h2>
+    <div class="row">
+      <button type="button" id="save-excel-btn" class="secondary" disabled>선택 공정 Excel 다운로드</button>
+      <button type="button" id="copy-ids-btn" class="secondary" disabled>추가조회 ID 복사</button>
+    </div>
+    <div id="tabs"></div>
+    <div id="results"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 검증 기록 (디버깅용)</h2>
+    <p class="muted">분석을 실행할 때마다 진행 단계·사용한 파일 이름과 SHA-256 해시·오류 내용을 자동으로 기록합니다(이 탭을 열지 않아도 기록됩니다).
+    아래 버튼을 누르면 이번 브라우저 탭에서 실행한 모든 분석 기록과, 그중 최근 <span id="kept-runs-note">5</span>회분의 원본 입력 파일 사본·결과물을 검증결과.zip 하나로 내려받습니다.
+    문제가 생겼을 때 이 zip을 그대로 전달하면 어느 파일에서 무엇이 어떻게 처리됐는지 재현할 수 있습니다. 원본 파일은 수정되지 않으며, 이 zip도 다운로드 폴더 밖으로 자동 전송되지 않습니다.</p>
+    <div class="row">
+      <button type="button" id="save-validation-zip-btn" class="secondary" disabled>검증결과.zip 다운로드</button>
+      <span id="run-count-note" class="muted">이번 세션에서 실행한 분석: 0회</span>
+    </div>
+  </div>
+
+  <footer>
+    LOT Tracker 오프라인 (Web) · v__VERSION__ · __BUILT_AT__<br>
+    See LOT 원본 파일을 수정하지 않습니다. 분석은 이 브라우저 탭 안의 메모리에서만 이루어지며, 페이지를 닫으면 사라집니다 — 필요한 결과는 Excel 또는 검증결과.zip으로 다운로드하세요.<br>
+    SMT RUNID는 RUNID CSV 연결 또는 M010 투입 발행·종료·Split 수량과 LOT 계열이 모두 일치하는 경우만 확정합니다. 품번과 투입 기준은 PMS 정보를 요청하며, 근거 없는 RUNID·품번을 만들어내지 않습니다.
+  </footer>
+</div>
+
+<script>__XLSX_SOURCE__</script>
+<script>
+"use strict";
+var __XLSX_GLOBALS = XLSX; // keep a reference before engine code shadows nothing; engine code expects read/write/utils in scope.
+var read = XLSX.read, write = XLSX.write, utils = XLSX.utils;
+</script>
+<script>__SHA256_SOURCE__</script>
+<script>__JSZIP_SOURCE__</script>
+<script>__ENGINE_SOURCE__</script>
+<script>__APP_SOURCE__</script>
+</body>
+</html>

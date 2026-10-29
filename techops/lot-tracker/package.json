@@ -1,0 +1,10 @@
+{
+  "name": "lot-tracker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node report/engine/test-runid-port.mjs && node trace/test/test-regression.cjs",
+    "test:browser": "node test/browser.mjs"
+  }
+}

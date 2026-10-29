@@ -1,0 +1,5 @@
+이 소스는 codex/lot-tracker-offline-handoff 브랜치에 통합되었습니다.
+현재 사용법과 검증 범위는 HANDOFF.md, 변경 이력은 CHANGELOG.md를 읽으세요.
+원본 ZIP에 있던 desktop/LotTracker.cs와 README.txt를 현재 WinForms 코드에 덮어쓰지 마세요.
+WinForms와 HTML 앱은 서로 다른 버전 원본과 빌드 절차를 사용합니다.
+main 병합은 운영 웹 자동배포를 유발하므로 자료 보관을 배포 승인으로 해석하지 마세요.

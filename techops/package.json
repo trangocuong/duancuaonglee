@@ -1,0 +1,34 @@
+{
+  "name": "techops-workmanager",
+  "version": "1.7.7",
+  "private": true,
+  "description": "Cloudflare Worker for the product technology work manager",
+  "type": "module",
+  "scripts": {
+    "build:evaluation": "node evaluation/build.mjs",
+    "test:evaluation": "node evaluation/test.mjs",
+    "check": "node --check worker.js",
+    "test": "node test.mjs",
+    "preview": "node preview.mjs",
+    "dev": "wrangler dev",
+    "db:init": "wrangler d1 execute techops-db --local --file=schema.sql",
+    "deploy": "wrangler deploy",
+    "wrangler": "wrangler",
+    "verify": "pnpm check && pnpm test && wrangler deploy --dry-run --outdir .wrangler/dry-run"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.19.0",
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "wrangler": "4.128.0"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "fflate": "0.7.4",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

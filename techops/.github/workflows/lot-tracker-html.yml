@@ -1,0 +1,48 @@
+name: LOT Tracker HTML
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, codex/lot-tracker-unified-html]
+    paths: ['lot-tracker/**', '.github/workflows/lot-tracker-html.yml']
+  pull_request:
+    paths: ['lot-tracker/**', '.github/workflows/lot-tracker-html.yml']
+concurrency:
+  group: lot-tracker-html-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  html:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node lot-tracker/build.mjs
+      - run: node lot-tracker/test/build.mjs
+      - run: node lot-tracker/report/engine/test-runid-port.mjs
+      - run: node lot-tracker/trace/test/test-regression.cjs
+      - name: RUNID quantity property tests
+        run: |
+          for seed in $(seq 1 20); do
+            node lot-tracker/trace/test/test-property.cjs 1000 20 "$seed" || exit 1
+          done
+      - run: npm install --prefix outputs/lot-tracker-browser --no-save playwright@1.62.1
+      - run: node outputs/lot-tracker-browser/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Offline HTML browser regression
+        run: node lot-tracker/test/browser.mjs
+        env:
+          PLAYWRIGHT_MODULE: file://${{ github.workspace }}/outputs/lot-tracker-browser/node_modules/playwright/index.mjs
+      - name: Built-in v3 XLSX export regression
+        run: node lot-tracker/test/template-browser.mjs
+        env:
+          PLAYWRIGHT_MODULE: file://${{ github.workspace }}/outputs/lot-tracker-browser/node_modules/playwright/index.mjs
+      - name: Upload one HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LOT-Tracker-HTML
+          path: lot-tracker/dist/LOT-Tracker-v*.html
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,10 @@
+.wrangler/
+node_modules/
+.pnpm-store/
+.dev.vars
+.env
+.env.*
+!.env.example
+outputs/
+validation-runs/
+**/validation-runs/

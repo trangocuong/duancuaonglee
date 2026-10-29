@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOT Tracker v__VERSION__</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f3f6fa; --card: #ffffff; --text: #172236; --muted: #566579; --border: #dce4ed;
+    --accent: #155cba; --accent-ink: #ffffff; --warn-bg: #fff4e5; --warn-border: #f0b95a;
+    --error: #c62828; --ok: #1e7b34; --warn: #9c5700;
+    --hdr1: #1f3864; --hdr1-ink: #ffffff; --hdr2: #d9e1f2; --mut: #f2f2f2; --path: #fff2cc; --input: #fce4d6; --spread: #e4dfec; --runin: #7030a0;
+    --lotid: #1f4e9a; --fail: #c00000; --m-in: #1e7b34; --m-out: #9c5700;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121923; --card: #1b2634; --text: #eef4fb; --muted: #afbed0; --border: #334459; --accent: #78adff; --accent-ink: #101b2b; --warn-bg: #3a2f14; --warn-border: #8a6a1f;
+      --hdr1: #2a3d66; --hdr2: #2b3342; --mut: #24282e; --path: #3a3417; --input: #43291c; --spread: #2f2840; --runin: #c9a3ff; --lotid: #8fb3ff; --fail: #ff6b6b;
+      --m-in: #6fd08c; --m-out: #f0b95a; --ok: #6fd08c; --warn: #f0b95a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Malgun Gothic", "맑은 고딕", -apple-system, "Segoe UI", Arial, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 1560px; margin: 0 auto; padding: 28px 24px 72px; }
+  h1 { font-size: clamp(22px, 2.3vw, 30px); margin: 0 0 6px; letter-spacing: -.025em; }
+  .subtitle { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 18px; box-shadow: 0 8px 28px rgba(15, 35, 60, .045); }
+  .card.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  h2 { font-size: 17px; margin: 0 0 12px; letter-spacing: -.015em; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  button { font: inherit; padding: 8px 14px; border-radius: 9px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; min-height: 38px; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.secondary { background: transparent; }
+  button.small { padding: 4px 10px; font-size: 12px; min-height: 32px; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button:hover:not(:disabled) { filter: brightness(0.97); }
+  button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, .lineage-wrap:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  input[type=file] { display: none; }
+  select { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  table.grid thead th.ref1 { background: #c65911 !important; color: #fff !important; }
+  table.grid thead th.ref2 { background: #f8cbad !important; color: #000 !important; }
+  input[type=text] { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  #lot-input { width: 180px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+  .lot-override { width: 120px; padding: 2px 6px !important; font-size: 12px !important; text-transform: uppercase; }
+  #drop-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 18px; text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 10px; transition: background 0.15s, border-color 0.15s; }
+  #drop-zone.drag { background: rgba(47,111,237,0.08); border-color: var(--accent); }
+  .status { font-size: 13px; padding: 8px 10px; border-radius: 8px; background: rgba(47,111,237,0.08); }
+  .status.error { background: rgba(198,40,40,0.1); color: var(--error); }
+  #tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
+  .tab-group-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; margin: 0 4px 0 10px; white-space: nowrap; }
+  .tab-group-label:first-child { margin-left: 0; }
+  .tab-btn { font-size: 13px; padding: 6px 10px; }
+  .tab-btn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .table-wrap { overflow: auto; max-height: 560px; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; vertical-align: top; }
+  thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+  .files td { white-space: nowrap; }
+  .kind-history { color: var(--ok); font-weight: 600; }
+  .kind-pms { color: var(--accent); font-weight: 600; }
+  .kind-unknown, .kind-error { color: var(--error); font-weight: 600; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(47,111,237,0.12); color: var(--accent); font-size: 11.5px; font-weight: 600; margin-left: 6px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .stat .v { font-size: 16px; font-weight: 700; word-break: break-all; }
+  .path { font-size: 13px; margin-bottom: 10px; }
+  .path b { color: var(--lotid); }
+  .lv-PASS { color: var(--ok); font-weight: 700; } .lv-WARN { color: var(--warn); font-weight: 700; }
+  .lv-FAIL { color: var(--error); font-weight: 700; } .lv-INFO { color: var(--muted); font-weight: 700; }
+  .lv-필수 { color: var(--error); font-weight: 700; } .lv-권장 { color: var(--warn); font-weight: 700; } .lv-선택 { color: var(--muted); }
+  /* LOT Tracer 그리드 */
+  table.grid { width: auto; font-size: 12px; white-space: pre; }
+  table.grid th, table.grid td { padding: 2px 6px; }
+  table.grid thead tr.h1 th { background: var(--hdr1); color: var(--hdr1-ink); text-align: center; top: 0; z-index: 3; }
+  table.grid thead tr.h2 th { background: var(--hdr2); color: var(--text); text-align: center; top: 25px; z-index: 3; }
+  table.grid .c-rowlot { position: sticky; left: 0; background: var(--card); z-index: 2; }
+  table.grid thead .c-rowlot { z-index: 4; }
+  table.grid td.k-mut { background: var(--mut); }
+  table.grid tr.r-path td { background: var(--path); }
+  table.grid tr.r-input td { background: var(--input); }
+  table.grid tr.r-spread td { background: var(--spread); }
+  table.grid td.runin { color: var(--runin); font-weight: 700; text-align: right; }
+  table.pre { width: auto; margin-bottom: 10px; }
+  td.tree-cell { font-family: GulimChe, "굴림체", Consolas, monospace; white-space: pre; color: var(--lotid); }
+  td.tree-cell.nofile { color: var(--muted); font-style: italic; }
+  .lineage-note { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+  .lineage-wrap { max-height: 680px; background: var(--card); }
+  table.lineage-grid { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 12px; }
+  table.lineage-grid th, table.lineage-grid td { border-top: 0; border-left: 0; padding: 8px 10px; }
+  table.lineage-grid thead th { min-width: 148px; background: var(--hdr1); color: var(--hdr1-ink); text-align: center; z-index: 3; }
+  table.lineage-grid thead th:first-child { position: sticky; left: 0; min-width: 230px; width: 230px; text-align: left; z-index: 4; }
+  table.lineage-grid thead th.lin-ref { background: var(--accent); color: var(--accent-ink); }
+  table.lineage-grid tbody th { position: sticky; left: 0; width: 230px; min-width: 230px; max-width: 230px; background: var(--card); z-index: 2; font-weight: 400; }
+  table.lineage-grid tbody tr.r-input th { background: var(--input); }
+  table.lineage-grid tbody td { width: 148px; min-width: 148px; max-width: 190px; overflow-wrap: anywhere; }
+  .lin-lot-name { display: block; color: var(--lotid); font-weight: 700; overflow-wrap: anywhere; }
+  .lin-missing { display: block; color: var(--warn); font-size: 11px; font-weight: 600; }
+  .lin-parent { display: block; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+  .lin-mutation, .lin-run { display: block; line-height: 1.45; }
+  .lin-mutation + .lin-run { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border); }
+  .lin-mutation strong { color: var(--accent); }
+  .lin-qty { color: var(--muted); white-space: nowrap; }
+  .lineage-diagram { min-width: 0; }
+  .lineage-svg-scroll { max-height: 700px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+  .lineage-svg { display: block; max-width: none; font-family: inherit; }
+  .trace-axis { fill: var(--muted); font-size: 12px; font-weight: 700; }
+  .trace-edge path { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+  .lineage-svg marker path { fill: var(--muted); }
+  .trace-edge text { fill: var(--muted); font-size: 10px; paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+  .trace-edge-foreign path { stroke: var(--runin); stroke-dasharray: 5 3; stroke-width: 2; }
+  .trace-edge-foreign text { fill: var(--runin); }
+  .trace-edge-back path { stroke-dasharray: 4 3; }
+  .trace-edge.is-dim, .trace-node.is-dim { opacity: .14; }
+  .trace-edge.is-active path { stroke: var(--accent); stroke-width: 2.7; }
+  .trace-edge.is-active text { fill: var(--accent); font-weight: 700; }
+  .trace-node { cursor: pointer; outline: none; }
+  .trace-node-box { fill: var(--card); stroke: var(--border); stroke-width: 1.4; }
+  .trace-node.is-input .trace-node-box { fill: var(--input); stroke: #dc8b45; stroke-width: 2; }
+  .trace-node.is-spread .trace-node-box { fill: var(--spread); }
+  .trace-node.is-foreign .trace-node-box { stroke: var(--runin); stroke-dasharray: 5 3; }
+  .trace-node.is-missing .trace-node-box { stroke: var(--warn-border); stroke-dasharray: 5 3; }
+  .trace-node-id { fill: var(--lotid); font-size: 12px; font-weight: 700; }
+  .trace-node-sub { fill: var(--muted); font-size: 10px; }
+  .trace-node:hover .trace-node-box, .trace-node:focus .trace-node-box, .trace-node.is-selected .trace-node-box { stroke: var(--accent); stroke-width: 2.5; }
+  .lineage-selection { margin: 8px 0; color: var(--muted); font-size: 12px; }
+  .lineage-table-details { margin-top: 12px; }
+  .lineage-table-details > summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  .advanced-options summary, .diagnostic-details summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  .advanced-options { margin: 2px 0 10px; font-size: 13px; }.advanced-options label { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; }
+  .diagnostic-details > summary { font-size: 16px; }.diagnostic-details p { max-width: 100ch; }.sensitive-note { color: var(--warn); font-weight: 700; }
+  @media (max-width: 900px) { .wrap { padding: 58px 12px 48px; }.card { padding: 15px; } }
+  table.pre th { background: var(--hdr2); white-space: nowrap; }
+  table.grid td.lotid { color: var(--lotid); }
+  table.grid tr.r-input td.c-rowlot { font-weight: 700; }
+  table.grid td.fail { color: var(--fail); font-weight: 700; }
+  table.grid td.m-split { color: var(--lotid); font-weight: 700; }
+  table.grid td.m-in { color: var(--m-in); font-weight: 700; }
+  table.grid td.m-out { color: var(--m-out); font-weight: 700; }
+  table.grid td.m-parent, table.grid td.sub { color: var(--muted); }
+  table.grid td.nofile { color: var(--muted); font-style: italic; }
+  table.grid td.num { text-align: right; }
+  .legend { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+  .legend span { display: inline-block; padding: 0 6px; border-radius: 4px; margin-right: 6px; }
+  .wrap { position: relative; }
+  h1, .subtitle, #drop-zone, label[for="file-input"], #pick-btn, #add-files-btn, #clear-btn, #file-input, #add-file-input, #file-list button { display: none !important; }
+
+  /* Unified workspace: compact controls, full-width results. */
+  body { font-size: 14px; }
+  h2 { font-size: 16px; }
+  .wrap { max-width: none; padding: 20px 24px 32px; }
+  .card { border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: none; }
+  .input-help { margin: 8px 0; color: var(--muted); font-size: 12px; }
+  .input-help > summary, .diagnostic-details > summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  .input-help p { margin: 8px 0 12px; line-height: 1.7; max-width: 110ch; }
+  .diagnostic-details:not([open]) { margin: 0; }
+  .diagnostic-details > summary { font-size: 13px; }
+  .diagnostic-details p { font-size: 12px; line-height: 1.7; max-width: 110ch; }
+  .empty-state { margin: 0; padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+  .table-wrap { max-height: 65vh; }
+  footer { font-size: 11px; margin-top: 12px; line-height: 1.7; }
+  @media (max-width: 640px) { .wrap { padding: 14px 12px 24px; } .card { padding: 14px; } }
+
+  .file-recognition > summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; }
+  .file-recognition:not([open]) { padding-top: 12px; padding-bottom: 12px; }
+  .file-recognition .row { display: none; }
+  .lineage-svg-scroll { max-height: 65vh; }
+  .summary { grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 data-vi='LOT Tracker <span class="badge">v__VERSION__ · Ngoại tuyến</span>'>LOT Tracker <span class="badge">v__VERSION__ · 오프라인</span></h1>
+  <p class="subtitle" data-vi="Chỉ cần nhập một LOT, công cụ sẽ tìm ngược đến RUNID đầu vào SMT, rồi tổng hợp toàn bộ SPLIT·MERGE từ RUNID đó và cả những LOT khác đã nhận sản phẩm (phân tán) thành một báo cáo Excel · không cần Internet · không cần cài đặt · không gửi bất kỳ tệp nào ra ngoài">LOT 하나만 입력하면 SMT 투입 RUNID까지 거꾸로 찾고, 그 RUNID에서 나온 SPLIT·MERGE 전체와 다른 LOT으로 흘러 들어간 곳(확산)까지 엑셀 리포트로 정리합니다 · 인터넷·설치 필요 없음 · 어떤 파일도 외부로 전송하지 않습니다</p>
+
+  <div class="card">
+    <h2 data-vi="Truy vết LOT">계보 추적</h2>
+    <div class="row">
+      <label for="lot-input">LOT ID</label>
+      <input type="text" id="lot-input" placeholder="예: H0HK8G0639" data-vi-placeholder="vd: H0HK8G0639" autocomplete="off" spellcheck="false">
+      <button type="button" id="trace-btn" class="primary" data-vi="Truy vết">추적 실행</button>
+    </div>
+    <div class="row">
+      <label for="ref-step" class="muted" data-vi="Công đoạn chuẩn (công đoạn phát sinh lỗi)">기준 공정(불량 발생 공정)</label>
+      <select id="ref-step"><option value="">없음 — 전체 확산 추적</option></select>
+      <label for="ref-code" class="muted" data-vi="hoặc mã lỗi">또는 불량 코드</label>
+      <input type="text" id="ref-code" placeholder="예: 4609" data-vi-placeholder="vd: 4609" autocomplete="off" spellcheck="false" style="width:110px">
+      <span class="muted" data-vi='Chọn một trong hai cách: công đoạn trực tiếp hoặc mã lỗi. LOT tách trước công đoạn chuẩn là bắt buộc, sau đó là khuyến nghị.'>기준 공정을 직접 고르거나 불량 코드를 입력하세요. 둘 중 마지막으로 선택한 방식이 적용됩니다. 기준 공정 전에 나뉜 LOT은 필수, 이후에 나뉜 LOT은 권장입니다.</span>
+    </div>
+    <details class="advanced-options"><summary data-vi="Tùy chọn truy vết nâng cao">고급 추적 옵션</summary>
+      <label class="muted"><input type="checkbox" id="opt-foreign" checked> <span data-vi="Truy vết cả RUNID của LOT được gộp từ LOT khác vào">다른 LOT에서 병합되어 들어온 LOT의 RUNID도 추적</span></label>
+    </details>
+    <div id="status" class="status">준비됨</div>
+  </div>
+
+  <details class="card file-recognition"><summary data-vi="Nhận diện tệp · sửa LOT ID">파일 인식 결과 · LOT ID 보정</summary>
+    <div id="drop-zone">파일을 추가하세요</div>
+    <div class="row">
+      <button type="button" class="primary" id="pick-btn" data-vi="Chọn tệp">파일 선택</button>
+      <input type="file" id="file-input" multiple accept=".csv,.xls,.xlsx">
+      <button type="button" id="clear-btn" class="secondary" data-vi="Đặt lại tất cả">전체 초기화</button>
+    </div>
+    <div id="file-list" class="muted"></div>
+  </details>
+
+  <div class="card" id="result-card" style="display:none">
+    <h2 data-vi="Kết quả truy vết">추적 결과</h2>
+    <div id="summary"></div>
+    <div class="row">
+      <button type="button" id="save-excel-btn" class="primary" disabled data-vi="Lưu báo cáo Excel">엑셀 리포트 저장</button>
+      <button type="button" id="copy-ids-btn" class="secondary" disabled data-vi="Sao chép LOT ID cần bổ sung (bắt buộc·khuyến nghị)">추가 필요 LOT ID 복사 (필수·권장)</button>
+    </div>
+    <div id="tabs"></div>
+    <div id="results"></div>
+  </div>
+
+  <div class="card">
+    <details class="diagnostic-details"><summary data-vi="Bản ghi kiểm chứng · gỡ lỗi">검증 기록 · 문제 재현용</summary>
+    <p class="muted" data-vi='Mỗi lần truy vết, công cụ tự động ghi lại các bước xử lý · tên và hash SHA-256 của tệp đã dùng · bản ghi tra cứu LOT · nội dung lỗi.
+    Bấm nút bên dưới để tải toàn bộ bản ghi truy vết đã chạy trong tab trình duyệt này, cùng bản sao tệp gốc·kết quả của <span id="kept-runs-note">5</span> lần chạy gần nhất, thành một tệp validation-result.zip.
+    Khi có sự cố, gửi nguyên tệp zip này sẽ giúp tái hiện file nào đã được xử lý như thế nào. Tệp gốc không bị sửa đổi, và tệp zip này cũng không tự động gửi ra khỏi thư mục Downloads.'>추적을 실행할 때마다 진행 단계 · 사용한 파일 이름과 SHA-256 해시 · LOT 조회 기록 · 오류 내용을 자동으로 기록합니다.
+    아래 버튼을 누르면 이번 브라우저 탭에서 실행한 모든 추적 기록과, 그중 최근 <span id="kept-runs-note">5</span>회분의 원본 입력 파일 사본·결과물을 검증결과.zip 하나로 내려받습니다.
+    문제가 생겼을 때 이 zip을 그대로 전달하면 어느 파일에서 무엇이 어떻게 처리됐는지 재현할 수 있습니다. 원본 파일은 수정되지 않으며, 이 zip도 다운로드 폴더 밖으로 자동 전송되지 않습니다.</p>
+    <p class="sensitive-note" data-vi="Tệp ZIP chứa bản sao tệp MES gốc của 5 lần chạy gần nhất. Hãy kiểm tra quy định dữ liệu công ty trước khi chia sẻ.">ZIP에는 최근 5회 실행에 사용한 MES 원본 파일 사본이 들어 있습니다. 공유 전에 회사 데이터 취급 기준을 확인하세요.</p>
+    <div class="row">
+      <button type="button" id="save-validation-zip-btn" class="secondary" disabled data-vi="Tải validation-result.zip">검증결과.zip 다운로드</button>
+      <span id="run-count-note" class="muted">이번 세션에서 실행한 추적: 0회</span>
+    </div>
+    </details>
+  </div>
+
+  <footer data-vi='LOT Tracker · v__VERSION__ · __BUILT_AT__<br>
+    Không sửa đổi tệp gốc MES. Truy vết chỉ diễn ra trong bộ nhớ của tab trình duyệt này, sẽ mất khi đóng trang — hãy tải kết quả cần thiết bằng Excel hoặc validation-result.zip.<br>
+    SMT RUNID chỉ được xác định khi theo LOT cha (SPLIT) tìm đến LOT có sự kiện đầu vào (ISSUE). PART NO chỉ dùng PROD_ID của tệp PMS, không tự tạo ra RUNID·mã hàng không có căn cứ.
+    Nơi sản phẩm RUNID bị gộp·tách sang LOT khác sẽ được theo dõi đến cùng (phân tán), và số lượng RUNID của LOT bị trộn rồi tách sẽ hiển thị dạng khoảng tối thiểu~tối đa.'>
+    LOT Tracker · v__VERSION__ · __BUILT_AT__<br>
+    MES 원본 파일을 수정하지 않습니다. 추적은 이 브라우저 탭 안의 메모리에서만 이루어지며, 페이지를 닫으면 사라집니다 — 필요한 결과는 엑셀 또는 검증결과.zip으로 다운로드하세요.<br>
+    SMT RUNID는 SPLIT 부모를 따라 올라가 투입(ISSUE) 이벤트가 있는 LOT에서만 확정합니다. PART NO는 PMS 파일의 PROD_ID만 사용하며, 근거 없는 RUNID·품번을 만들어내지 않습니다.
+    RUNID 제품이 다른 LOT으로 병합·분할되어 나간 곳은 끝까지 따라가며(확산), 섞인 뒤 나뉜 LOT의 RUNID 수량은 최소~최대 범위로 표시합니다.
+  </footer>
+</div>
+
+<script>
+/* xlsx-js-style (SheetJS 0.18.5 기반, 셀 서식 쓰기 지원) — vendor/XLSX-JS-STYLE-LICENSE.txt */
+__XLSX_SOURCE__
+</script>
+<script>
+/* JSZip 3.10.1 — vendor/JSZIP-LICENSE.md */
+__JSZIP_SOURCE__
+</script>
+<script>
+__SHA256_SOURCE__
+</script>
+<script>
+__ENGINE_SOURCE__
+</script>
+<script>
+__APP_SOURCE__
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Cloudflare & Wrangler
+.wrangler/
+.dev.vars
+
+# Environment
+.env
+.env.*
+!*.example
+
+# Builds & Outputs
+outputs/
+validation-runs/
+*.log
+*.tmp
+
+# Local SQLite databases (preview will recreate on first run)
+techops/techops_local.db
+techops/techops_local.db-journal
+techops/techops_local.db-wal
+techops/techops_local.db-shm
+
+# OS generated
+.DS_Store
+Thumbs.db
