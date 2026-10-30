@@ -192,3 +192,4 @@ export async function apiCreateReport(request, env, user) {
   ).bind(report_type, period_start, period_end, content, user.id).run();
   return json({ id: res.meta.last_row_id }, 201);
 }
+
