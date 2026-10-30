@@ -1,4 +1,5 @@
 import { read, write, utils } from 'xlsx/xlsx.mjs';
+import { LOT_DICTIONARY } from './src/i18n/lot.js';
 import { summarizeStepVisits, validateSteps, selectedSteps, stepReportWorkbook, renderStepReport, reportVisit, requiredPriorHistoryLots, renderRunLinkNotices, withoutCancelledEvents, followUpMatrix, isOutgoingSplit } from './lot-step-report.js';
 
 const MAX_FILES = 50;
@@ -9,38 +10,7 @@ const EVENT_HEADERS = ['EVENT_NAME', 'DATE/TIME', 'QTY', 'STEP', 'EQP', 'LINE', 
 const SPLIT_MAP_HEADERS = ['NO', 'REPRSN_SRLNO', 'LOT_ID', 'BARCODE_SERLNO', 'PROD_ID', 'SPLIT_LOT', 'RESERVE_ID', 'PS_PROC', 'FW_PROC', 'TEST_RESULT', 'PCB_ARRAY', 'MERGE_LOT', 'PCB_MAP', 'WORK_NAME', 'FRONT_RESULT', 'BACK_RESULT', 'FRONT_SCRAP_CODE', 'BACK_SCRAP_CODE', 'CREATE_DATE'];
 const METRIC_KEYS = ['eqp', 'in', 'out', 'failQty', 'failCodes', 'yld'];
 
-export const trackerWords = {
-  ko: {
-    title: 'LOT Tracker', pending: 'SWP See LOT 연결 대기', future: '향후 LOTID를 한 줄에 하나씩 붙여넣으면 SWP See LOT을 조회해 같은 형식의 보고서를 만듭니다.',
-    lotIds: 'LOTID 목록', connect: 'SWP 조회 (연결 대기)', upload: 'See LOT 조회 파일 분석',
-    guide: 'See LOT에서 LOTID별로 저장한 .csv, .xls 또는 .xlsx 파일을 여러 개 선택하세요. 일반 파일명은 LOTID로 사용하고, 보안 다운로드 UUID 파일명은 ASSYLOT 또는 상호 Split 이력(양쪽 파일이 서로를 가리키는 실제 이벤트 근거)으로만 실제 LOTID를 판별합니다. 번호 패턴만으로는 LOTID를 추정하지 않습니다. PCB 분할/병합 맵 파일도 함께 읽되 공정 이력이 아닌 참고 정보로만 표시합니다. Split LOT 안내가 나오면 요청된 초기 투입 RUNID CSV도 함께 선택할 수 있습니다. Cancel 회차를 제외하고 공정 이력·불량·수율·분할 LOT·후속 추적 LOT·최신 상태를 계산합니다. 최대 50개, 파일당 2MB, 전체 12MB.',
-    preview: '보고서 만들기', report: 'LOT Tracker 보고서', excel: 'Excel 보고서 다운로드', copy: '텍스트 복사', copied: '복사했습니다.',
-    apply: '분석 결과 저장', saved: '개 LOT 분석 결과를 저장했습니다.', fileError: '파일 오류', partMissing: 'See LOT 파일에는 PART NO가 없습니다. 저장된 LOT 데이터 또는 일일보고에서 찾은 값만 표시하며, 없는 값은 빈칸입니다.',
-    splitMissing: '누락된 SMT 및 Router(M033) 이력을 확인하려면 다음 Split LOT의 See LOT 파일을 추가로 선택하세요:', asOf: '기준 시각', source: '분석 파일',
-    invalidHeader: '지원하지 않는 CSV 형식입니다. See LOT 이벤트 파일 또는 초기 투입 RUNID 파일을 선택하세요.', noEventFiles: '초기 투입 RUNID 파일만 선택되었습니다. 분석할 See LOT 이벤트 파일도 함께 선택하세요.',
-    runUnlinked: 'RUNID 파일을 선택한 See LOT 이력과 연결할 수 없어 파트넘버 연결에 사용하지 않았습니다.', runDirect: 'RUNID 직접 연결', runIndirect: 'RUNID 간접 연결', partFromRun: '파트넘버는 이 RUNID 파일의 PROD_ID를 사용했습니다.',
-  },
-  en: {
-    title: 'LOT Tracker', pending: 'SWP See LOT connection pending', future: 'Later, paste one LOTID per line to query SWP See LOT and create the same report.',
-    lotIds: 'LOTID list', connect: 'Query SWP (pending)', upload: 'Analyze See LOT exports',
-    guide: 'Select multiple .csv, .xls or .xlsx files saved from See LOT, one per LOTID. A normal filename supplies the LOTID; a UUID filename from a secure download is resolved to the real LOTID only from ASSYLOT or reciprocal Split history (matching Split events recorded in both files) — never from an identifier number pattern alone. PCB split / merge map files are also read, shown as reference metadata rather than process history. When a split LOT prompt appears, you may also select the requested initial-input RUNID CSV. Cancelled visits are excluded; process history, failures, yield, split lots, follow-up lots, and current status are calculated. Up to 50 files, 2MB each, 12MB total.',
-    preview: 'Build report', report: 'LOT Tracker report', excel: 'Download Excel report', copy: 'Copy text', copied: 'Copied.',
-    apply: 'Save analysis results', saved: ' LOT analysis results saved.', fileError: 'File error', partMissing: 'See LOT exports do not contain PART NO. Only values found in saved LOT data or daily reports are shown; otherwise the field is blank.',
-    splitMissing: 'To retrieve missing SMT and Router (M033) history, add the See LOT files for these split LOTs:', asOf: 'As of', source: 'Source files',
-    invalidHeader: 'Unsupported CSV format. Select a See LOT event file or an initial-input RUNID file.', noEventFiles: 'Only initial-input RUNID files were selected. Add a See LOT event file to analyze.',
-    runUnlinked: 'The RUNID file could not be linked to the selected See LOT history, so it was not used for the part number.', runDirect: 'Direct RUNID link', runIndirect: 'Indirect RUNID link', partFromRun: 'The part number comes from PROD_ID in this RUNID file.',
-  },
-  vi: {
-    title: 'LOT Tracker', pending: 'Đang chờ kết nối SWP See LOT', future: 'Sau này, dán mỗi LOTID trên một dòng để truy vấn SWP See LOT và tạo cùng mẫu báo cáo.',
-    lotIds: 'Danh sách LOTID', connect: 'Truy vấn SWP (đang chờ)', upload: 'Phân tích tệp See LOT',
-    guide: 'Chọn nhiều tệp .csv, .xls hoặc .xlsx đã lưu từ See LOT, mỗi LOTID một tệp. Tên tệp thông thường dùng làm LOTID; tên tệp UUID từ tải xuống bảo mật chỉ được xác định LOTID thật qua ASSYLOT hoặc lịch sử Split tương hỗ (bằng chứng sự kiện khớp ở cả hai tệp) — không bao giờ suy đoán chỉ từ mẫu số. Tệp bản đồ tách/gộp PCB cũng được đọc nhưng chỉ hiển thị như thông tin tham khảo, không phải lịch sử công đoạn. Khi có yêu cầu lot tách, có thể chọn thêm tệp CSV RUNID đầu vào ban đầu được yêu cầu. Loại trừ các lượt Cancel; hệ thống tính lịch sử công đoạn, lỗi, yield, lot tách, lot cần theo dõi và trạng thái mới nhất. Tối đa 50 tệp, 2MB mỗi tệp, tổng 12MB.',
-    preview: 'Tạo báo cáo', report: 'Báo cáo LOT Tracker', excel: 'Tải báo cáo Excel', copy: 'Sao chép văn bản', copied: 'Đã sao chép.',
-    apply: 'Lưu kết quả phân tích', saved: ' kết quả phân tích LOT đã được lưu.', fileError: 'Lỗi tệp', partMissing: 'Tệp See LOT không có PART NO. Chỉ hiển thị giá trị tìm thấy trong dữ liệu LOT đã lưu hoặc báo cáo hằng ngày; nếu không có sẽ để trống.',
-    splitMissing: 'Để lấy lịch sử SMT và Router (M033) còn thiếu, hãy thêm tệp See LOT của các lot tách sau:', asOf: 'Thời điểm dữ liệu', source: 'Tệp phân tích',
-    invalidHeader: 'Định dạng CSV không được hỗ trợ. Hãy chọn tệp sự kiện See LOT hoặc tệp RUNID đầu vào ban đầu.', noEventFiles: 'Chỉ có tệp RUNID đầu vào ban đầu. Hãy thêm tệp sự kiện See LOT để phân tích.',
-    runUnlinked: 'Không thể liên kết tệp RUNID với lịch sử See LOT đã chọn nên tệp này không được dùng cho mã sản phẩm.', runDirect: 'Liên kết RUNID trực tiếp', runIndirect: 'Liên kết RUNID gián tiếp', partFromRun: 'Mã sản phẩm lấy từ PROD_ID trong tệp RUNID này.',
-  },
-};
+export const trackerWords = LOT_DICTIONARY.trackerWords;
 
 function cleanText(value, max = 4000) {
   const text = String(value ?? '').trim();
@@ -624,7 +594,7 @@ function renderReport(summaries, w, esc, lang) {
   const runLinkNotices = renderRunLinkNotices(summaries, w, esc);
   const followUp = followUpMatrix(summaries, lang);
   return `<div class="card daily-part lot-report"><div class="daily-part-head"><h3>${esc(w.report)}</h3><span class="daily-count">${summaries.length} LOT</span>
-    <form method="post" class="lot-head-action"><input type="hidden" name="action" value="select"><input type="hidden" name="reportMode" value="steps"><input type="hidden" name="payload" value="${esc(payload)}"><button class="secondary">${esc({ko: '스텝별 보고서로 전환', en: 'Report by step', vi: 'Báo cáo theo công đoạn'}[lang] || 'Report by step')}</button></form></div>
+    <form method="post" class="lot-head-action"><input type="hidden" name="action" value="select"><input type="hidden" name="reportMode" value="steps"><input type="hidden" name="payload" value="${esc(payload)}"><button class="secondary">${esc(w.switchToStepReport || 'Report by step')}</button></form></div>
     <p class="muted">${esc(w.source)}: ${esc(summaries.map(summary => summary.filename).join(', '))}</p>
     <p class="muted">${esc(w.asOf)}: ${esc(summaries.map(summary => `${summary.lotId} ${summary.asOf}`).join(' · '))}</p>
     <p class="muted">${esc(w.partMissing)}</p>${runLinkNotices}${missingChildren.length ? `<p role="status" class="lot-note is-warn">${esc(w.splitMissing)} <strong>${esc(missingChildren.join(', '))}</strong></p>` : ''}

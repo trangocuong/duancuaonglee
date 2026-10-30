@@ -25,15 +25,11 @@ export function langSwitcher(lang) {
 
 export function layout({ title, user, lang, body, activeNav, activeSubNav = "", mainClass = "" }) {
   const L = t(lang);
-  const versionLabels = { ko: ["배포 버전", "배포 ID 확인 불가"], en: ["Deployed version", "Deployment ID unavailable"], vi: ["Phiên bản triển khai", "Không có mã triển khai"] }[lang];
+  const versionLabels = L.versionLabels;
   const icon = (paths, size = 18) => `<svg class="nav-icon" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
   const navItem = (href, key, label, paths) => `<a href="${href}" class="${activeNav === key ? "active" : ""}">${icon(paths)}<span>${escapeHtml(label)}</span></a>`;
-  const taskMenuLabels = {
-    ko: { overview: "종합 현황", list: "평가 목록", "new-product": "신제품 평가", "mass-report": "1K · 2K · 5K · 10K 보고", history: "업데이트 이력", reports: "보고서 · 통계", users: "평가 권한 관리" },
-    en: { overview: "Overview", list: "Evaluation List", "new-product": "New Product Evaluation", "mass-report": "1K · 2K · 5K · 10K Reports", history: "Update History", reports: "Reports & Statistics", users: "Evaluation Permissions" },
-    vi: { overview: "Tổng quan", list: "Danh sách đánh giá", "new-product": "Đánh giá sản phẩm mới", "mass-report": "Báo cáo 1K · 2K · 5K · 10K", history: "Lịch sử cập nhật", reports: "Báo cáo & Thống kê", users: "Quyền đánh giá" },
-  }[lang];
-  const legacyTaskLabel = { ko: "기존 일반 업무 목록", en: "Existing task list", vi: "Danh sách công việc cũ" }[lang];
+  const taskMenuLabels = L.taskMenuLabels;
+  const legacyTaskLabel = L.legacyTaskLabel;
   const taskSubNav = activeNav === "tasks" ? `<div class="sidebar-subnav">
     ${Object.entries(taskMenuLabels).filter(([key]) => key !== "users" || user?.role === "admin").map(([key,label]) => `<a href="/tasks?section=${key}" class="${activeSubNav === key ? "active" : ""}">${escapeHtml(label)}</a>`).join("")}
     <a href="/tasks/legacy" class="sidebar-subnav-legacy ${activeSubNav === "legacy" ? "active" : ""}">${escapeHtml(legacyTaskLabel)}</a>
@@ -551,12 +547,12 @@ export function layout({ title, user, lang, body, activeNav, activeSubNav = "", 
           <div class="user-popover-body">
             <div class="popover-item" onclick="openChangePasswordModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-6 6 7 7-2 2-2-2-2 2-2-2-7-7a5 5 0 0 1 7-7Z"/></svg>
-              <span>${lang === 'vi' ? 'Đổi mật khẩu' : (lang === 'en' ? 'Change Password' : '비밀번호 변경')}</span>
+              <span>${escapeHtml(L.changePassword)}</span>
             </div>
 
             <div class="popover-section-label">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></svg>
-              <span>${lang === 'vi' ? 'Ngôn ngữ' : (lang === 'en' ? 'Language' : '언어')}</span>
+              <span>${escapeHtml(L.language)}</span>
             </div>
             <div class="user-lang-chips">
               <a href="/lang/ko" class="lang-chip ${lang === 'ko' ? 'active' : ''}">한국어</a>
@@ -583,18 +579,18 @@ export function layout({ title, user, lang, body, activeNav, activeSubNav = "", 
 <div id="changePasswordModal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeChangePasswordModal()">
   <div class="modal-card">
     <div class="modal-header">
-      <h3 style="margin:0;">${lang === 'vi' ? 'Đổi mật khẩu' : (lang === 'en' ? 'Change Password' : '비밀번호 변경')}</h3>
+      <h3 style="margin:0;">${escapeHtml(L.changePassword)}</h3>
       <button type="button" class="modal-close-btn" onclick="closeChangePasswordModal()">&times;</button>
     </div>
     <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
       <div id="changePassMsg" class="modal-msg" style="display:none;"></div>
-      <label>${lang === 'vi' ? 'Mật khẩu mới (tối thiểu 8 ký tự)' : (lang === 'en' ? 'New Password (min 8 chars)' : '새 비밀번호 (8자 이상)')}</label>
+      <label>${escapeHtml(L.newPasswordMin8)}</label>
       <input type="password" name="new_password" required minlength="8" placeholder="••••••••" autocomplete="new-password">
-      <label>${lang === 'vi' ? 'Xác nhận mật khẩu mới' : (lang === 'en' ? 'Confirm New Password' : '새 비밀번호 확인')}</label>
+      <label>${escapeHtml(L.confirmNewPassword)}</label>
       <input type="password" name="confirm_password" required minlength="8" placeholder="••••••••" autocomplete="new-password">
       <div class="modal-actions">
-        <button type="button" class="secondary" onclick="closeChangePasswordModal()">${lang === 'vi' ? 'Hủy' : (lang === 'en' ? 'Cancel' : '취소')}</button>
-        <button type="submit">${lang === 'vi' ? 'Lưu thay đổi' : (lang === 'en' ? 'Save' : '변경')}</button>
+        <button type="button" class="secondary" onclick="closeChangePasswordModal()">${escapeHtml(L.cancel)}</button>
+        <button type="submit">${escapeHtml(L.save)}</button>
       </div>
     </form>
   </div>
