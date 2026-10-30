@@ -7,19 +7,19 @@ import {
 } from "../views/layout.js";
 import {
   FIELD_HEADERS, fieldCsv, parseFieldCsv,
-} from "../../daily-field-csv.js";
+} from "../modules/daily/daily-field-csv.js";
 import {
   DAILY_CLASSIFICATION_FIELDS,
   DAILY_CLASSIFICATION_ROWS,
   classificationOptions,
-} from "../../daily-report-config.js";
+} from "../config/daily-config.js";
 import {
   DEFAULT_LANG,
   STANDARD_OPTION_LABELS,
   DAILY_STATUS_LABELS,
   getLang,
   t,
-} from "../../i18n.js";
+} from "../i18n/index.js";
 import {
   normalizeDailyStatusCode,
   resolveTrilingualText,
@@ -27,7 +27,7 @@ import {
   warmTranslationCache,
   translatedText,
 } from "../modules/translation/translation-service.js";
-import { RETIRED_DAILY_FIELDS, lotWords } from "../../lot-info.js";
+import { RETIRED_DAILY_FIELDS, lotWords } from "../modules/lot/lot-info.js";
 
 export const DAILY_CLASSIFICATION_VALUES = new Set(DAILY_CLASSIFICATION_ROWS.flat().filter(Boolean));
 

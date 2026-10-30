@@ -6,7 +6,7 @@ import {
 } from "../views/layout.js";
 import {
   getLang, t,
-} from "../../i18n.js";
+} from "../i18n/index.js";
 
 // #region 기준정보 (Master Data)
 // 일일업무(EAV)와 달리 행당 JSON(data_json) 구조다 — §master_schema.sql 설계 근거 참고.

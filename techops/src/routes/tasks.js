@@ -4,7 +4,7 @@ import {
 import { layout } from "../views/layout.js";
 import {
   STATUS_OPTIONS, PRIORITY_OPTIONS, getLang, t,
-} from "../../i18n.js";
+} from "../i18n/index.js";
 import {
   buildDisplayTranslationMap, warmTranslationCache, translatedText,
 } from "../modules/translation/translation-service.js";

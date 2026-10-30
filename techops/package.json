@@ -8,7 +8,7 @@
     "build:evaluation": "node evaluation/build.mjs",
     "test:evaluation": "node evaluation/test.mjs",
     "check": "node --check worker.js",
-    "test": "node test.mjs",
+    "test": "node tests/test.mjs",
     "preview": "node preview.mjs",
     "dev": "wrangler dev",
     "db:init": "wrangler d1 execute techops-db --local --file=schema.sql",

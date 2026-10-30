@@ -4,7 +4,7 @@ import {
   isSameOriginMutation, escapeHtml,
 } from "./src/utils/helpers.js";
 import { layout, dailyWorkSubtabs, pageMenuPlaceholder } from "./src/views/layout.js";
-import { getLang, t } from "./i18n.js";
+import { getLang, t } from "./src/i18n/index.js";
 
 // Routes & Handlers
 import { evaluationAsset, pageEvaluation } from "./src/routes/evaluation.js";
@@ -47,8 +47,8 @@ import {
   pageUserApprovals, handleMemberAccount, handleUserApprove,
   handleUserPasswordReset, handleUserPromote, handleUserDemote, handleUserRevoke,
 } from "./src/routes/users.js";
-import { RETIRED_DAILY_FIELDS, handleLotInfoApi } from "./lot-info.js";
-import { handleLotTracker } from "./lot-tracker.js";
+import { RETIRED_DAILY_FIELDS, handleLotInfoApi } from "./src/modules/lot/lot-info.js";
+import { handleLotTracker } from "./src/modules/lot/lot-tracker.js";
 
 /**
  * YieldOps 제품기술 업무관리 (workmanager)

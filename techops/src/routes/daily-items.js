@@ -7,15 +7,15 @@ import {
 import {
   DEFAULT_LANG, getLang, t, WORK_CATEGORIES,
   STANDARD_OPTION_LABELS, DAILY_STATUS_LABELS,
-} from "../../i18n.js";
+} from "../i18n/index.js";
 import {
   normalizeDailyStatusCode, resolveStandardOptionValue, translateText,
   warmTranslationCache, buildDisplayTranslationMap, resolveTrilingualText, translatedText,
 } from "../modules/translation/translation-service.js";
-import { normalizeLotIds, lotInput, lotScript } from "../../lot-info.js";
+import { normalizeLotIds, lotInput, lotScript } from "../modules/lot/lot-info.js";
 import {
   DAILY_CLASSIFICATION_FIELDS, isValidClassification,
-} from "../../daily-report-config.js";
+} from "../config/daily-config.js";
 import {
   loadDailyFields, activeDailyFields, hasDailyClassification,
   resolveFieldLabel, resolveOptionValue, isIdentifierField, resolveValueText,

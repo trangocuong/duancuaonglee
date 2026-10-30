@@ -2,7 +2,7 @@ import {
   COMMON_SECURITY_HEADERS, plainText, html, escapeHtml,
 } from "../utils/helpers.js";
 import { layout } from "../views/layout.js";
-import { getLang, t } from "../../i18n.js";
+import { getLang, t } from "../i18n/index.js";
 import { clientJs, clientCss, reportTemplate } from "../../evaluation/generated/assets.js";
 
 export function evaluationAsset(request) {

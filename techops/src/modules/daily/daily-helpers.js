@@ -9,8 +9,8 @@ import {
 } from "../translation/translation-service.js";
 import {
   DAILY_CLASSIFICATION_FIELDS, DAILY_CLASSIFICATION_ROWS,
-} from "../../../daily-report-config.js";
-import { lotInput } from "../../../lot-info.js";
+} from "../../config/daily-config.js";
+import { lotInput } from "../lot/lot-info.js";
 import {
   loadDailyFields, resolveFieldLabel, resolveValueText, resolveOptionValue, isIdentifierField,
 } from "../../routes/daily-fields.js";

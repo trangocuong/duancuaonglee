@@ -18,7 +18,7 @@ import {
   SIGNUP_EMAIL_DOMAIN,
 } from "../utils/helpers.js";
 import { layout } from "../views/layout.js";
-import { getLang, t, langCookie } from "../../i18n.js";
+import { getLang, t, langCookie } from "../i18n/index.js";
 
 export const SESSION_TTL_DAYS = 7;
 export const MAX_LOGIN_FAILS = 5;

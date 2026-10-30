@@ -1,7 +1,7 @@
 import { read, utils, write } from 'xlsx/xlsx.mjs';
-import { summarizeStepVisits, selectedSteps, stepReportMatrix, stepReportWorkbook, STEP_ROUTES, withoutCancelledEvents, followUpRows } from './lot-step-report.js';
-import { summarizeSeeLotWorkbook, validateTrackerPayload, resolveTrackerSummaries } from './lot-tracker.js';
-import worker from './worker.js';
+import { summarizeStepVisits, selectedSteps, stepReportMatrix, stepReportWorkbook, STEP_ROUTES, withoutCancelledEvents, followUpRows } from '../src/modules/lot/lot-step-report.js';
+import { summarizeSeeLotWorkbook, validateTrackerPayload, resolveTrackerSummaries } from '../src/modules/lot/lot-tracker.js';
+import worker from '../worker.js';
 
 export async function testLotSteps({ check, env, viewerHeaders }) {
   const event = (eventName, dateTime, qty, step = 'M055', extra = {}) => ({ eventName, dateTime, qty, step, eqp: 'EQP-01', ...extra });

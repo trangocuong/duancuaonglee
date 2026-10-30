@@ -7,7 +7,7 @@ import {
   STANDARD_OPTION_LABELS,
   DAILY_STATUS_LABELS,
   LEGACY_DAILY_STATUS_CODES,
-} from "../../../i18n.js";
+} from "../../i18n/index.js";
 
 export function normalizeDailyStatusCode(value) {
   const normalized = String(value || "").trim();

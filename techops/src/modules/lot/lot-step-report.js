@@ -1,4 +1,5 @@
 import { utils, write } from 'xlsx/xlsx.mjs';
+import { LOT_DICTIONARY } from '../../i18n/lot.js';
 
 export const STEP_ROUTES = {
   MDL: ['SMT', 'M033', 'M050', 'M055', 'M060', 'M065', 'M070'],
@@ -9,16 +10,8 @@ const REPORT_COLUMNS = ['EQP', 'IN', 'OUT', 'FAIL', 'SCRAP', 'YLD'];
 const HISTORY_COLUMNS = ['EQP', 'Track In', 'IN', 'Track Out', 'OUT', 'FAIL', 'SCRAP', 'YLD'];
 const FOLLOW_UP_COLUMNS = ['Priority', 'LOT NO', 'Type', 'Observed at', 'QTY', 'Status / reason', 'Required check', 'Source LOT'];
 const SPLIT_FLOW_COLUMNS = ['Root LOT', 'Level', 'Type', 'LOT NO', 'Parent / Target', 'Split / Merge QTY', 'Current QTY', 'Timestamp', 'Status'];
-const FOLLOW_UP_WORDS = {
-  ko: { headers: ['우선순위', 'LOTID', '구분', '관측 시각', '수량', '상태 / 사유', '확인할 사항', '원 LOT'], priority: { High: '긴급', Monitor: '추적', Lookup: '조회 필요' }, type: { 'Uploaded LOT': '업로드 LOT', 'Split LOT': '분할 LOT', 'Recycle LOT': '회수 LOT' } },
-  en: { headers: FOLLOW_UP_COLUMNS, priority: {}, type: {} },
-  vi: { headers: ['Ưu tiên', 'LOT NO', 'Loại', 'Thời điểm', 'QTY', 'Trạng thái / lý do', 'Nội dung cần kiểm tra', 'LOT nguồn'], priority: { High: 'Cao', Monitor: 'Theo dõi', Lookup: 'Cần tra cứu' }, type: { 'Uploaded LOT': 'LOT đã tải', 'Split LOT': 'LOT tách', 'Recycle LOT': 'LOT tái chế' } },
-};
-const WORDS = {
-  ko: { choose: '보고서 스텝 선택', route: '공정 기준', auto: '파일에서 확인된 스텝', update: '선택 적용', all: '전체 선택', none: '전체 해제', note: '각 스텝의 최신 차수 IN/OUT과 전체 차수의 FAIL/SCRAP 누계를 표시합니다. SMT는 M010의 Track In과 M015의 Track Out을 한 행으로 연결합니다. 수량은 원본 단위를 유지하며 스텝 간 합산하지 않습니다.', detail: 'Track In / Out 상세 보기', missing: '이력 없음', select: '보고서에 포함할 스텝을 하나 이상 선택하세요.', legacy: '기존 고정 양식', dynamic: '스텝별 보고서', mode: '보고서 형식' },
-  en: { choose: 'Select report steps', route: 'Process route', auto: 'Steps found in files', update: 'Apply selection', all: 'Select all', none: 'Clear all', note: 'Each step shows the latest visit IN/OUT and cumulative FAIL/SCRAP across all visits. SMT combines the M010 Track In with the M015 Track Out. Quantities retain their source units and are not added across steps.', detail: 'Show Track In / Out details', missing: 'No history', select: 'Select at least one report step.', legacy: 'Original fixed format', dynamic: 'Report by step', mode: 'Report format' },
-  vi: { choose: 'Chọn công đoạn báo cáo', route: 'Quy trình', auto: 'Công đoạn có trong tệp', update: 'Áp dụng', all: 'Chọn tất cả', none: 'Bỏ chọn', note: 'Hiển thị lượt mới nhất của mỗi công đoạn. SMT nối Track In của M010 với Track Out của M015. Giữ nguyên đơn vị số lượng, không cộng giữa các công đoạn.', detail: 'Xem chi tiết Track In / Out', missing: 'Không có lịch sử', select: 'Chọn ít nhất một công đoạn.', legacy: 'Mẫu cố định ban đầu', dynamic: 'Báo cáo theo công đoạn', mode: 'Mẫu báo cáo' },
-};
+const FOLLOW_UP_WORDS = LOT_DICTIONARY.followUpWords;
+const WORDS = LOT_DICTIONARY.stepReportWords;
 
 export function timestamp(text) {
   const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(text);

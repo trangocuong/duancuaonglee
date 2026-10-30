@@ -1,10 +1,8 @@
+import { LOT_DICTIONARY } from "../../i18n/lot.js";
+
 export const RETIRED_DAILY_FIELDS = new Set(['LOT Status', '랏넘버', '작업내용', '진행중인 공정', '수량', '양품 수량', '불량 수량', '수율', '진행률', '상태', '이슈/조치내용', '이슈·조치내용', '다음 계획', '비고']);
 
-export const lotWords = {
-  ko: { entry: 'LOTID를 한 줄에 하나씩 입력', hint: 'LOTID를 한 줄에 하나씩 입력하세요.', lookup: 'LOT 조회', missing: '저장된 LOT 데이터 없음', error: '처리하지 못했습니다. 입력 내용과 연결 상태를 확인하세요.', invalidLot: 'LOTID는 한 줄에 하나씩, 최대 50개·각 120자로 입력하세요.', retired: '제거된 보고 필드는 다시 등록할 수 없습니다.' },
-  en: { entry: 'One LOTID per line', hint: 'Enter one LOTID per line.', lookup: 'Look up LOT', missing: 'No saved LOT data', error: 'Unable to process. Check the input and connection.', invalidLot: 'Enter one LOTID per line, up to 50 IDs of 120 characters each.', retired: 'Removed report fields cannot be added again.' },
-  vi: { entry: 'Mỗi LOTID một dòng', hint: 'Nhập mỗi LOTID trên một dòng.', lookup: 'Tra cứu LOT', missing: 'Không có dữ liệu LOT đã lưu', error: 'Không thể xử lý. Kiểm tra dữ liệu và kết nối.', invalidLot: 'Nhập mỗi LOTID một dòng, tối đa 50 mã, mỗi mã 120 ký tự.', retired: 'Không thể thêm lại các mục báo cáo đã xóa.' },
-};
+export const lotWords = LOT_DICTIONARY.lotWords;
 
 export function normalizeLotIds(value) {
   const ids = String(value).split(/\r?\n/).map(s => s.trim()).filter(Boolean);

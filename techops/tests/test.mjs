@@ -1,13 +1,13 @@
 import { read as readXlsx, utils as xlsxUtils, write as writeXlsx } from "xlsx/xlsx.mjs";
-import { buildTrackerReportRows, summarizeRunMetadata, summarizeSeeLotWorkbook, trackerReportText, trackerWords } from "./lot-tracker.js";
+import { buildTrackerReportRows, summarizeRunMetadata, summarizeSeeLotWorkbook, trackerReportText, trackerWords } from "../src/modules/lot/lot-tracker.js";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
-import worker from "./worker.js";
+import worker from "../worker.js";
 import { testUserManagement } from "./test-user-management.mjs";
 import { testLotSteps } from "./test-lot-steps.mjs";
 import { testTranslationEfficiency } from "./test-translation.mjs";
-import { fieldCsv, parseFieldCsv } from "./daily-field-csv.js";
-import { DAILY_CLASSIFICATION_FIELDS, DAILY_CLASSIFICATION_ROWS } from "./daily-report-config.js";
+import { fieldCsv, parseFieldCsv } from "../src/modules/daily/daily-field-csv.js";
+import { DAILY_CLASSIFICATION_FIELDS, DAILY_CLASSIFICATION_ROWS } from "../src/config/daily-config.js";
 
 const db = new DatabaseSync(":memory:");
 db.exec(fs.readFileSync("./schema.sql", "utf8"));

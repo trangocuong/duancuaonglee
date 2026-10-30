@@ -6,11 +6,11 @@ import {
 } from "../views/layout.js";
 import {
   getLang, t,
-} from "../../i18n.js";
+} from "../i18n/index.js";
 import {
   buildDisplayTranslationMap, translateText, warmTranslationCache, translatedText,
 } from "../modules/translation/translation-service.js";
-import { normalizeLotIds } from "../../lot-info.js";
+import { normalizeLotIds } from "../modules/lot/lot-info.js";
 import {
   loadDailyFields, activeDailyFields, hasDailyClassification, resolveOptionValue,
 } from "./daily-fields.js";

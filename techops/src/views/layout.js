@@ -10,7 +10,7 @@
  */
 
 import { escapeHtml, html } from "../utils/helpers.js";
-import { LANGS, LANG_NAMES, t, getLang } from "../../i18n.js";
+import { LANGS, LANG_NAMES, t, getLang } from "../i18n/index.js";
 import appPackage from "../../package.json" with { type: "json" };
 
 export function langSwitcher(lang) {

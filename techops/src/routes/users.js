@@ -13,7 +13,7 @@ import {
   isAllowedSignupEmail,
 } from "../utils/helpers.js";
 import { layout, forbiddenResponse } from "../views/layout.js";
-import { getLang, t } from "../../i18n.js";
+import { getLang, t } from "../i18n/index.js";
 
 export const USERS_MAIN_CLASS = "daily-work-page users-page";
 

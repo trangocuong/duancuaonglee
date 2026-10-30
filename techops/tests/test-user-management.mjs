@@ -1,4 +1,4 @@
-import worker from './worker.js';
+import worker from '../worker.js';
 
 export async function testUserManagement({ db, env, check, adminHeaders }) {
   const insert = (sql, ...params) => Number(db.prepare(sql).run(...params).lastInsertRowid);
