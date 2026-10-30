@@ -24,3 +24,4 @@ if %errorlevel% neq 0 (
     echo [LỖI] Máy chủ đã dừng lại với mã lỗi %errorlevel%!
     pause
 )
+

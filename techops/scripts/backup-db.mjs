@@ -40,3 +40,4 @@ try {
   console.error("[Backup Thất bại]", err);
   process.exit(1);
 }
+

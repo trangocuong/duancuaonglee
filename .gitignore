@@ -23,6 +23,9 @@ techops/techops_local.db-journal
 techops/techops_local.db-wal
 techops/techops_local.db-shm
 techops/backups/
+techops/backups/
+New folder/
+*.zip
 
 # OS generated
 .DS_Store
