@@ -102,10 +102,11 @@ export function langCookie(lang) {
   return `lang=${encodeURIComponent(lang)}; Path=/; Secure; SameSite=Lax; Max-Age=31536000`;
 }
 
-export function getLang(request) {
+export function getLang(request, user) {
   const cookies = parseCookies(request);
   const fromCookie = cookies["lang"];
   if (fromCookie && LANGS.includes(fromCookie)) return fromCookie;
+  if (user && user.preferred_lang && LANGS.includes(user.preferred_lang)) return user.preferred_lang;
   const accept = request.headers.get("accept-language") || "";
   for (const part of accept.split(",")) {
     const code = part.trim().slice(0, 2).toLowerCase();

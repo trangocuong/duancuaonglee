@@ -107,7 +107,7 @@ export default {
       }
 
       const langMatch = path.match(/^\/lang\/(ko|en|vi)$/);
-      if (langMatch && method === "GET") return handleLangSwitch(request, langMatch[1]);
+      if (langMatch && method === "GET") return handleLangSwitch(request, langMatch[1], env);
 
       // 이 아래는 전부 로그인 필요
       const user = await requireAuth(request, env);

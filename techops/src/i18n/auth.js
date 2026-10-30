@@ -322,6 +322,11 @@ export const AUTH_DICTIONARY = {
     "en": "Confirm New Password",
     "vi": "Xác nhận mật khẩu mới"
   },
+  "passwordMinLength": {
+    "ko": "비밀번호는 8자 이상이어야 합니다.",
+    "en": "Password must be at least 8 characters.",
+    "vi": "Mật khẩu mới phải có ít nhất 8 ký tự."
+  },
   "passwordMismatch": {
     "ko": "비밀번호가 일치하지 않습니다.",
     "en": "Passwords do not match.",

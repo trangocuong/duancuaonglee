@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS techops_users (
   display_name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin','member')),
   email_verified_at TEXT,
+  preferred_lang TEXT DEFAULT 'ko',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

@@ -17,8 +17,18 @@ import {
   isAllowedSignupEmail,
   SIGNUP_EMAIL_DOMAIN,
 } from "../utils/helpers.js";
-import { layout } from "../views/layout.js";
-import { getLang, t, langCookie } from "../i18n/index.js";
+import { getLang, t, langCookie, LANGS } from "../i18n/index.js";
+import {
+  renderLoginView,
+  renderSignupView,
+  renderVerifyEmailInvalidView,
+  renderResendVerificationView,
+  renderForgotPasswordView,
+  renderResetPasswordView,
+  renderResetPasswordInvalidView,
+  renderSetupDoneView,
+  renderSetupView,
+} from "../views/auth.js";
 
 export const SESSION_TTL_DAYS = 7;
 export const MAX_LOGIN_FAILS = 5;
@@ -32,7 +42,7 @@ export async function getCurrentUser(request, env) {
   const token = cookies["session"];
   if (!token) return null;
   const row = await env.DB.prepare(
-    `SELECT u.id, u.username, u.display_name, u.role, s.expires_at
+    `SELECT u.id, u.username, u.display_name, u.role, u.preferred_lang, s.expires_at
        FROM techops_sessions s JOIN techops_users u ON u.id = s.user_id
       WHERE s.id = ?`
   ).bind(token).first();
@@ -107,27 +117,7 @@ export async function pageLogin(request, env, error) {
   else if (url.searchParams.get("verify") === "1") notice = L.signupVerifyNotice;
   else if (url.searchParams.get("verified") === "1") notice = L.verifiedNotice;
   else if (url.searchParams.get("reset") === "1") notice = L.resetSuccessNotice;
-  return html(layout({
-    title: L.login, user: null, lang, body: `
-    <div class="card" style="max-width:360px;margin:60px auto;">
-      <h2 style="margin-top:0;">${escapeHtml(L.login)}</h2>
-      ${notice ? `<p class="muted">${escapeHtml(notice)}</p>` : ""}
-      <form method="post" action="/login">
-        <label>${escapeHtml(L.username)}</label>
-        <input name="username" required autofocus>
-        <label>${escapeHtml(L.password)}</label>
-        <input name="password" type="password" required>
-        ${error ? `<div class="err">${escapeHtml(error)}</div>` : ""}
-        <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.login)}</button></div>
-      </form>
-      <p class="muted" style="margin-top:14px;">
-        <a href="/forgot-password">${escapeHtml(L.forgotPassword)}</a>
-        &nbsp;·&nbsp;
-        ${escapeHtml(L.noAccountYet)} <a href="/signup">${escapeHtml(L.signup)}</a>
-        &nbsp;·&nbsp;
-        <a href="/resend-verification">${escapeHtml(L.resendVerification)}</a>
-      </p>
-    </div>` }));
+  return html(renderLoginView({ notice, error, lang }));
 }
 
 export async function handleLoginPost(request, env) {
@@ -188,7 +178,7 @@ export async function handleLogout(request, env) {
   return redirect("/login", { "set-cookie": clearedSessionCookie() });
 }
 
-export function handleLangSwitch(request, code) {
+export async function handleLangSwitch(request, code, env) {
   const referer = request.headers.get("referer");
   let back = "/daily-reports";
   if (referer) {
@@ -196,6 +186,16 @@ export function handleLangSwitch(request, code) {
       const u = new URL(referer);
       back = u.pathname + u.search;
     } catch (e) { /* ignore malformed referer */ }
+  }
+  if (env && LANGS.includes(code)) {
+    try {
+      const user = await getCurrentUser(request, env);
+      if (user) {
+        await env.DB.prepare(`UPDATE techops_users SET preferred_lang = ? WHERE id = ?`).bind(code, user.id).run();
+      }
+    } catch (e) {
+      /* ignore db update error */
+    }
   }
   return redirect(back, { "set-cookie": langCookie(code) });
 }
@@ -208,25 +208,7 @@ export function handleLangSwitch(request, code) {
 
 export async function pageSignup(request, env, error, notice) {
   const lang = getLang(request);
-  const L = t(lang);
-  return html(layout({
-    title: L.signupHeading, user: null, lang, body: `
-    <div class="card" style="max-width:400px;margin:60px auto;">
-      <h2 style="margin-top:0;">${escapeHtml(L.signupHeading)}</h2>
-      <p class="muted">${escapeHtml(L.domainNotice)}</p>
-      ${notice ? `<p class="muted">${escapeHtml(notice)}</p>` : ""}
-      <form method="post" action="/signup">
-        <label>${escapeHtml(L.username)} (${escapeHtml(L.emailLabel)})</label>
-        <input name="username" type="email" required autofocus placeholder="name@${SIGNUP_EMAIL_DOMAIN}">
-        <label>${escapeHtml(L.displayName)}</label>
-        <input name="display_name" required>
-        <label>${escapeHtml(L.password)}</label>
-        <input name="password" type="password" required minlength="8">
-        ${error ? `<div class="err">${escapeHtml(error)}</div>` : ""}
-        <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.signupBtn)}</button></div>
-      </form>
-      <p class="muted" style="margin-top:14px;"><a href="/login">${escapeHtml(L.backToLogin)}</a></p>
-    </div>` }));
+  return html(renderSignupView({ notice, error, lang }));
 }
 
 export async function handleSignupPost(request, env) {
@@ -294,11 +276,7 @@ export async function handleVerifyEmail(request, env) {
   const valid = row && !row.used_at && new Date(row.expires_at + "Z") > new Date();
 
   if (!valid) {
-    return html(layout({ title: L.verifyEmailHeading, user: null, lang, body: `
-      <div class="card" style="max-width:400px;margin:60px auto;">
-        <div class="err">${escapeHtml(L.verifyInvalidToken)}</div>
-        <p class="muted" style="margin-top:14px;"><a href="/resend-verification">${escapeHtml(L.resendVerification)}</a></p>
-      </div>` }), 400);
+    return html(renderVerifyEmailInvalidView({ lang }), 400);
   }
 
   await env.DB.prepare(`UPDATE techops_users SET email_verified_at = datetime('now') WHERE id = ?`).bind(row.user_id).run();
@@ -310,21 +288,7 @@ export async function handleVerifyEmail(request, env) {
 
 export async function pageResendVerification(request, env, error, notice) {
   const lang = getLang(request);
-  const L = t(lang);
-  return html(layout({
-    title: L.resendVerificationHeading, user: null, lang, body: `
-    <div class="card" style="max-width:400px;margin:60px auto;">
-      <h2 style="margin-top:0;">${escapeHtml(L.resendVerificationHeading)}</h2>
-      <p class="muted">${escapeHtml(L.resendVerificationNotice)}</p>
-      ${notice ? `<p class="muted">${escapeHtml(notice)}</p>` : ""}
-      <form method="post" action="/resend-verification">
-        <label>${escapeHtml(L.username)} (${escapeHtml(L.emailLabel)})</label>
-        <input name="username" type="email" required autofocus>
-        ${error ? `<div class="err">${escapeHtml(error)}</div>` : ""}
-        <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.resendVerificationBtn)}</button></div>
-      </form>
-      <p class="muted" style="margin-top:14px;"><a href="/login">${escapeHtml(L.backToLogin)}</a></p>
-    </div>` }));
+  return html(renderResendVerificationView({ notice, error, lang }));
 }
 
 export async function handleResendVerificationPost(request, env) {
@@ -364,21 +328,7 @@ export async function handleResendVerificationPost(request, env) {
 
 export async function pageForgotPassword(request, env, error, notice) {
   const lang = getLang(request);
-  const L = t(lang);
-  return html(layout({
-    title: L.forgotPasswordHeading, user: null, lang, body: `
-    <div class="card" style="max-width:400px;margin:60px auto;">
-      <h2 style="margin-top:0;">${escapeHtml(L.forgotPasswordHeading)}</h2>
-      <p class="muted">${escapeHtml(L.forgotPasswordNotice)}</p>
-      ${notice ? `<p class="muted">${escapeHtml(notice)}</p>` : ""}
-      <form method="post" action="/forgot-password">
-        <label>${escapeHtml(L.username)} (${escapeHtml(L.emailLabel)})</label>
-        <input name="username" type="email" required autofocus>
-        ${error ? `<div class="err">${escapeHtml(error)}</div>` : ""}
-        <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.sendResetLink)}</button></div>
-      </form>
-      <p class="muted" style="margin-top:14px;"><a href="/login">${escapeHtml(L.backToLogin)}</a></p>
-    </div>` }));
+  return html(renderForgotPasswordView({ notice, error, lang }));
 }
 
 export async function handleForgotPasswordPost(request, env) {
@@ -414,7 +364,6 @@ export async function handleForgotPasswordPost(request, env) {
 
 export async function pageResetPassword(request, env, error) {
   const lang = getLang(request);
-  const L = t(lang);
   const url = new URL(request.url);
   const token = url.searchParams.get("token") || "";
 
@@ -424,25 +373,10 @@ export async function pageResetPassword(request, env, error) {
   const valid = row && !row.used_at && new Date(row.expires_at + "Z") > new Date();
 
   if (!valid) {
-    return html(layout({ title: L.resetPasswordHeading, user: null, lang, body: `
-      <div class="card" style="max-width:400px;margin:60px auto;">
-        <div class="err">${escapeHtml(L.resetInvalidToken)}</div>
-        <p class="muted" style="margin-top:14px;"><a href="/forgot-password">${escapeHtml(L.forgotPassword)}</a></p>
-      </div>` }), 400);
+    return html(renderResetPasswordInvalidView({ lang }), 400);
   }
 
-  return html(layout({
-    title: L.resetPasswordHeading, user: null, lang, body: `
-    <div class="card" style="max-width:400px;margin:60px auto;">
-      <h2 style="margin-top:0;">${escapeHtml(L.resetPasswordHeading)}</h2>
-      <form method="post" action="/reset-password">
-        <input type="hidden" name="token" value="${escapeHtml(token)}">
-        <label>${escapeHtml(L.newPassword)}</label>
-        <input name="password" type="password" required minlength="8" autofocus>
-        ${error ? `<div class="err">${escapeHtml(error)}</div>` : ""}
-        <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.resetBtn)}</button></div>
-      </form>
-    </div>` }));
+  return html(renderResetPasswordView({ token, error, lang }));
 }
 
 export async function handleResetPasswordPost(request, env) {
@@ -458,11 +392,7 @@ export async function handleResetPasswordPost(request, env) {
   const valid = row && !row.used_at && new Date(row.expires_at + "Z") > new Date();
 
   if (!valid) {
-    return html(layout({ title: L.resetPasswordHeading, user: null, lang, body: `
-      <div class="card" style="max-width:400px;margin:60px auto;">
-        <div class="err">${escapeHtml(L.resetInvalidToken)}</div>
-        <p class="muted" style="margin-top:14px;"><a href="/forgot-password">${escapeHtml(L.forgotPassword)}</a></p>
-      </div>` }), 400);
+    return html(renderResetPasswordInvalidView({ lang }), 400);
   }
 
   if (password.length < 8) {
@@ -492,30 +422,11 @@ export async function handleResetPasswordPost(request, env) {
 
 export async function pageSetup(request, env, error) {
   const lang = getLang(request);
-  const L = t(lang);
   const { count } = await env.DB.prepare(`SELECT COUNT(*) as count FROM techops_users`).first();
   if (count > 0) {
-    return html(layout({ title: L.setupDoneTitle, user: null, lang, body: `
-      <div class="card"><p>${escapeHtml(L.adminExists)} <a href="/login">${escapeHtml(L.goToLogin)}</a></p></div>` }), 403);
+    return html(renderSetupDoneView({ lang }), 403);
   }
-  return html(layout({
-    title: L.initialSetupTitle, user: null, lang, body: `
-    <div class="card" style="max-width:400px;margin:60px auto;">
-      <h2 style="margin-top:0;">${escapeHtml(L.createAdminHeading)}</h2>
-      <p class="muted">${escapeHtml(L.setupOnlyNotice)}</p>
-      <form method="post" action="/setup">
-        <label>${escapeHtml(L.setupToken)}</label>
-        <input name="setup_token" required>
-        <label>${escapeHtml(L.adminUsername)}</label>
-        <input name="username" required>
-        <label>${escapeHtml(L.displayName)}</label>
-        <input name="display_name" required>
-        <label>${escapeHtml(L.password)}</label>
-        <input name="password" type="password" required minlength="8">
-        ${error ? `<div class="err">${escapeHtml(error)}</div>` : ""}
-        <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.createAdminBtn)}</button></div>
-      </form>
-    </div>` }));
+  return html(renderSetupView({ error, lang }));
 }
 
 export async function handleSetupPost(request, env) {
@@ -549,18 +460,16 @@ export async function handleChangePassword(request, env, user) {
   const form = await request.formData();
   const newPassword = String(form.get("new_password") || "");
   const confirmPassword = String(form.get("confirm_password") || "");
-  const lang = getLang(request);
+  const lang = getLang(request, user);
+  const L = t(lang);
   if (!newPassword || newPassword.length < 8) {
-    const msg = lang === "vi" ? "Mật khẩu mới phải có ít nhất 8 ký tự." : (lang === "en" ? "Password must be at least 8 characters." : "비밀번호는 8자 이상이어야 합니다.");
-    return json({ error: msg }, 400);
+    return json({ error: L.passwordMinLength }, 400);
   }
   if (newPassword !== confirmPassword) {
-    const msg = lang === "vi" ? "Xác nhận mật khẩu không khớp." : (lang === "en" ? "Passwords do not match." : "비밀번호가 일치하지 않습니다.");
-    return json({ error: msg }, 400);
+    return json({ error: L.passwordMismatch }, 400);
   }
   const { salt, hash } = await hashPassword(newPassword);
   await env.DB.prepare("UPDATE techops_users SET password_hash = ?, password_salt = ? WHERE id = ?")
     .bind(hash, salt, user.id).run();
-  const msg = lang === "vi" ? "Đổi mật khẩu thành công!" : (lang === "en" ? "Password changed successfully!" : "비밀번호가 변경되었습니다.");
-  return json({ success: true, message: msg });
+  return json({ success: true, message: L.passwordChangedSuccess });
 }
