@@ -9,7 +9,7 @@ fs.mkdirSync('.wrangler/eval-test',{recursive:true});
 await build({stdin:{contents:`export * from './evaluation/app/lib/excel-report.ts'; export * from './evaluation/app/lib/mass-report-excel.ts'; export * from './evaluation/app/lib/excel-import.ts';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',outfile:'.wrangler/eval-test/excel.mjs'});
 const excel=await import('../.wrangler/eval-test/excel.mjs');
 const db=new DatabaseSync(':memory:');
-db.exec(fs.readFileSync('schema.sql','utf8')); db.exec(fs.readFileSync('evaluation/schema.sql','utf8'));
+db.exec(fs.readFileSync('database/schema.sql','utf8')); db.exec(fs.readFileSync('evaluation/schema.sql','utf8'));
 db.exec(`INSERT INTO techops_users(id,username,password_hash,password_salt,display_name,role) VALUES(1,'admin@local','x','x','관리자','admin'),(2,'member@local','x','x','회원','member'); INSERT INTO techops_sessions(id,user_id,expires_at) VALUES('admin',1,datetime('now','+1 day')),('member',2,datetime('now','+1 day'));`);
 class Statement {
   constructor(sql){this.sql=sql;this.params=[]} bind(...p){this.params=p;return this}

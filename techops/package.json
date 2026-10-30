@@ -11,7 +11,7 @@
     "test": "node tests/test.mjs",
     "preview": "node preview.mjs",
     "dev": "wrangler dev",
-    "db:init": "wrangler d1 execute techops-db --local --file=schema.sql",
+    "db:init": "wrangler d1 execute techops-db --local --file=database/schema.sql",
     "deploy": "wrangler deploy",
     "wrangler": "wrangler",
     "verify": "pnpm check && pnpm test && wrangler deploy --dry-run --outdir .wrangler/dry-run"

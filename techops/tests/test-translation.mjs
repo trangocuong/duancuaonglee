@@ -5,7 +5,7 @@ import worker from '../worker.js';
 export async function testTranslationEfficiency({ check, makeEnv }) {
   const db = new DatabaseSync(':memory:');
   try {
-    db.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
+    db.exec(fs.readFileSync(new URL('../database/schema.sql', import.meta.url), 'utf8'));
     db.exec(`
       INSERT INTO techops_users (username,password_hash,password_salt,display_name,role)
         VALUES ('audit@example.test','unused','unused','Audit User','admin');

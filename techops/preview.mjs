@@ -10,7 +10,7 @@ const db = new DatabaseSync(dbPath);
 
 if (isNewDb) {
   console.log(`[Preview] Đang khởi tạo cơ sở dữ liệu mới tại ${dbPath}...`);
-  db.exec(fs.readFileSync("./schema.sql", "utf8"));
+  db.exec(fs.readFileSync("./database/schema.sql", "utf8"));
   db.exec(fs.readFileSync("./evaluation/schema.sql", "utf8"));
   db.exec(`
     INSERT INTO techops_users (username, password_hash, password_salt, display_name, role, email_verified_at)
@@ -20,7 +20,7 @@ if (isNewDb) {
     INSERT INTO techops_sessions (id, user_id, expires_at)
     VALUES ('preview-session', 1, datetime('now', '+1 day'));
   `);
-  db.exec(fs.readFileSync("./demo-seed.sql", "utf8"));
+  db.exec(fs.readFileSync("./database/demo-seed.sql", "utf8"));
   console.log("[Preview] Đã nạp thành công schema và demo-seed.");
 } else {
   console.log(`[Preview] Sử dụng cơ sở dữ liệu hiện có: ${dbPath}`);

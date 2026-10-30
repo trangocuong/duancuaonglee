@@ -10,7 +10,7 @@ import { fieldCsv, parseFieldCsv } from "../src/modules/daily/daily-field-csv.js
 import { DAILY_CLASSIFICATION_FIELDS, DAILY_CLASSIFICATION_ROWS } from "../src/config/daily-config.js";
 
 const db = new DatabaseSync(":memory:");
-db.exec(fs.readFileSync("./schema.sql", "utf8"));
+db.exec(fs.readFileSync("./database/schema.sql", "utf8"));
 
 class D1Stmt {
   constructor(db, sql) { this.db = db; this.sql = sql; this.params = []; }
@@ -619,7 +619,7 @@ async function main() {
 
   db.prepare("UPDATE tech_daily_update_value SET value='진행중', value_en='In Progress', value_vi='Đang tiến hành' WHERE update_id=? AND field_id=?")
     .run(dailyUpdate.id, statusField.id);
-  const statusMigrationSql = fs.readFileSync("./status-code-migration.sql", "utf8");
+  const statusMigrationSql = fs.readFileSync("./database/migrations/status-code-migration.sql", "utf8");
   db.exec(statusMigrationSql);
   db.exec(statusMigrationSql);
   const migratedDailyStatus = db.prepare("SELECT value, value_en, value_vi FROM tech_daily_update_value WHERE update_id=? AND field_id=?")
@@ -822,7 +822,7 @@ async function main() {
       && taskAfterInvalidUpdate.due_date === taskBeforeInvalidUpdate.due_date);
 
   // 29) 제공한 데모 시드가 재실행 가능하고 임원 대시보드에서 바로 조회됨
-  const demoSql = fs.readFileSync("./demo-seed.sql", "utf8");
+  const demoSql = fs.readFileSync("./database/demo-seed.sql", "utf8");
   db.exec(demoSql);
   db.exec(demoSql);
   const demoDate = db.prepare("SELECT date('now', '-1 day') AS d").get().d;
@@ -1526,8 +1526,8 @@ async function main() {
   const archivedUpdateId = db.prepare('SELECT id FROM tech_daily_update WHERE item_id=?').get(lotItemId).id;
   db.prepare("INSERT INTO tech_daily_update_value(update_id,field_id,value,value_en,value_vi) VALUES(?,?,'보존할 과거 이력','Historical work','Lịch sử')").run(archivedUpdateId, archivedFieldId);
   const beforeMigration = dailyCounts();
-  db.exec(fs.readFileSync('./lot-info-migration.sql', 'utf8'));
-  db.exec(fs.readFileSync('./lot-info-migration.sql', 'utf8'));
+  db.exec(fs.readFileSync('./database/migrations/lot-info-migration.sql', 'utf8'));
+  db.exec(fs.readFileSync('./database/migrations/lot-info-migration.sql', 'utf8'));
   check('LOT migration is repeatable and preserves historical rows', dailyCounts() === beforeMigration && db.prepare("SELECT COUNT(*) count FROM tech_daily_field WHERE label='LOTID'").get().count === 1);
   for (const route of ['/daily-items', '/daily-fields', '/daily-fields/export']) {
     res = await worker.fetch(new Request('https://x' + route, { headers: adminHeaders2 }), env, {});
