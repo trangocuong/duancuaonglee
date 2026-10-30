@@ -107,6 +107,11 @@ export const AUTH_DICTIONARY = {
     "en": "Your account has been created. Please log in.",
     "vi": "Tài khoản đã được tạo. Vui lòng đăng nhập."
   },
+  "pendingApprovalNotice": {
+    "ko": "회원가입이 완료되었습니다. 관리자 승인 후 로그인하실 수 있습니다.",
+    "en": "Sign up successful! Please wait for administrator approval before logging in.",
+    "vi": "Đăng ký thành công! Tài khoản đang chờ Quản trị viên phê duyệt trước khi có thể đăng nhập."
+  },
   "forgotPassword": {
     "ko": "비밀번호를 잊으셨나요?",
     "en": "Forgot your password?",

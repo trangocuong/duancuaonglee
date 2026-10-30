@@ -22,6 +22,7 @@ techops/techops_local.db
 techops/techops_local.db-journal
 techops/techops_local.db-wal
 techops/techops_local.db-shm
+techops/backups/
 
 # OS generated
 .DS_Store

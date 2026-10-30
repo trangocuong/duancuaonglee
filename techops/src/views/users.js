@@ -128,3 +128,4 @@ export function renderResetMemberPasswordView({ target, temporaryPassword, user,
     </div>`,
   });
 }
+

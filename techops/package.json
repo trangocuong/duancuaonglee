@@ -9,6 +9,8 @@
     "test:evaluation": "node evaluation/test.mjs",
     "check": "node --check worker.js",
     "test": "node tests/test.mjs",
+    "start:lan": "node server.mjs",
+    "db:backup": "node scripts/backup-db.mjs",
     "preview": "node preview.mjs",
     "dev": "wrangler dev",
     "db:init": "wrangler d1 execute techops-db --local --file=database/schema.sql",

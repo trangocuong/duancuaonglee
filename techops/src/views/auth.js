@@ -190,3 +190,4 @@ export function renderSetupView({ error, lang }) {
     </div>`,
   });
 }
+

@@ -18,6 +18,7 @@ import {
   SIGNUP_EMAIL_DOMAIN,
 } from "../utils/helpers.js";
 import { getLang, t, langCookie, LANGS } from "../i18n/index.js";
+import { isPrivateLanIp } from "../utils/lan-helpers.js";
 import {
   renderLoginView,
   renderSignupView,
@@ -36,6 +37,17 @@ export const LOCKOUT_MINUTES = 15;
 export const MEMBER_LOGIN_ALLOWED_IPS = ["117.4.33.107", "14.241.73.189", "134.231.132.48"];
 export const RESET_TOKEN_TTL_MINUTES = 30;
 export const EMAIL_VERIFY_TOKEN_TTL_MINUTES = 60 * 24;
+
+export function isClientIpAllowed(request, env) {
+  const allowed = env?.MEMBER_LOGIN_ALLOWED_IPS || MEMBER_LOGIN_ALLOWED_IPS;
+  if (!allowed || allowed.length === 0) return true;
+  const ip = request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "";
+  if (allowed.includes(ip)) return true;
+  if ((env?.ALLOW_LAN_IPS || process.env?.ALLOW_LAN_IPS) && isPrivateLanIp(ip)) {
+    return true;
+  }
+  return false;
+}
 
 export async function getCurrentUser(request, env) {
   const cookies = parseCookies(request);
@@ -117,6 +129,7 @@ export async function pageLogin(request, env, error) {
   else if (url.searchParams.get("verify") === "1") notice = L.signupVerifyNotice;
   else if (url.searchParams.get("verified") === "1") notice = L.verifiedNotice;
   else if (url.searchParams.get("reset") === "1") notice = L.resetSuccessNotice;
+  else if (url.searchParams.get("pending_approval") === "1") notice = L.pendingApprovalNotice;
   return html(renderLoginView({ notice, error, lang }));
 }
 
@@ -157,7 +170,10 @@ export async function handleLoginPost(request, env) {
 
   if (!user.email_verified_at) {
     // 자격 증명은 정상이므로 로그인 실패로 집계하지 않음 (계정 잠금 대상 아님)
-    return pageLogin(request, env, L.emailNotVerified); } if (user.role !== "admin" && MEMBER_LOGIN_ALLOWED_IPS.length > 0 && !MEMBER_LOGIN_ALLOWED_IPS.includes(request.headers.get("CF-Connecting-IP") || "")) { return pageLogin(request, env, L.ipRestricted);
+    return pageLogin(request, env, L.emailNotVerified);
+  }
+  if (user.role !== "admin" && !isClientIpAllowed(request, env)) {
+    return pageLogin(request, env, L.ipRestricted);
   }
 
   await env.DB.prepare(`DELETE FROM techops_login_attempts WHERE username = ?`).bind(username).run();
@@ -219,7 +235,10 @@ export async function handleSignupPost(request, env) {
   const displayName = String(form.get("display_name") || "").trim();
   const password = String(form.get("password") || "");
 
-  if (MEMBER_LOGIN_ALLOWED_IPS.length > 0 && !MEMBER_LOGIN_ALLOWED_IPS.includes(request.headers.get("CF-Connecting-IP") || "")) { return pageSignup(request, env, L.signupIpRestricted); } if (!isAllowedSignupEmail(username)) {
+  if (!isClientIpAllowed(request, env)) {
+    return pageSignup(request, env, L.signupIpRestricted);
+  }
+  if (!isAllowedSignupEmail(username)) {
     return pageSignup(request, env, L.invalidDomain);
   }
   if (!displayName || password.length < 8) {
@@ -233,15 +252,19 @@ export async function handleSignupPost(request, env) {
 
   const { salt, hash } = await hashPassword(password);
   const requireVerification = !!env.RESEND_API_KEY;
+  const requireAdminApproval = env.REQUIRE_ADMIN_APPROVAL === "true" || env.REQUIRE_ADMIN_APPROVAL === true || !!env.LAN_MODE;
   const now = new Date();
-  // RESEND_API_KEY가 설정되어 있지 않으면 인증 메일을 보낼 수 없으므로,
-  // 이 경우에는 기존 동작대로 즉시 활성화한다 (설정 완료 시 자동으로 인증 절차가 적용됨).
-  const verifiedAt = requireVerification ? null : now.toISOString().replace("Z", "");
+  // RESEND_API_KEY가 있거나 관리자 승인 모드(LAN_MODE)인 경우, email_verified_at은 null로 설정되어
+  // 관리자(Admin)가 /admin/users 에서 승인하기 전까지 로그인이 제한된다.
+  const verifiedAt = (requireVerification || requireAdminApproval) ? null : now.toISOString().replace("Z", "");
   const insertRes = await env.DB.prepare(
     `INSERT INTO techops_users (username, password_hash, password_salt, display_name, role, email_verified_at) VALUES (?, ?, ?, ?, 'member', ?)`
   ).bind(username, hash, salt, displayName, verifiedAt).run();
 
   if (!requireVerification) {
+    if (requireAdminApproval) {
+      return redirect("/login?pending_approval=1");
+    }
     return redirect("/login?signup=1");
   }
 

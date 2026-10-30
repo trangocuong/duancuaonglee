@@ -110,3 +110,4 @@ export function renderTaskDetailView({ task, taskTitle, taskDescription, updates
     </div>`,
   });
 }
+

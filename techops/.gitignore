@@ -8,3 +8,6 @@ node_modules/
 outputs/
 validation-runs/
 **/validation-runs/
+backups/
+*.db-wal
+*.db-shm
