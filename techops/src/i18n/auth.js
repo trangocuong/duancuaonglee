@@ -327,6 +327,21 @@ export const AUTH_DICTIONARY = {
     "en": "Confirm New Password",
     "vi": "Xác nhận mật khẩu mới"
   },
+  "currentPasswordLabel": {
+    "ko": "현재 비밀번호",
+    "en": "Current Password",
+    "vi": "Mật khẩu hiện tại"
+  },
+  "currentPasswordRequired": {
+    "ko": "현재 비밀번호를 입력해주세요.",
+    "en": "Please enter your current password.",
+    "vi": "Vui lòng nhập mật khẩu hiện tại."
+  },
+  "currentPasswordIncorrect": {
+    "ko": "현재 비밀번호가 일치하지 않습니다.",
+    "en": "Current password is incorrect.",
+    "vi": "Mật khẩu hiện tại không chính xác."
+  },
   "passwordMinLength": {
     "ko": "비밀번호는 8자 이상이어야 합니다.",
     "en": "Password must be at least 8 characters.",

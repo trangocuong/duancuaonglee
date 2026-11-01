@@ -481,10 +481,30 @@ export async function handleSetupPost(request, env) {
 
 export async function handleChangePassword(request, env, user) {
   const form = await request.formData();
+  const currentPassword = String(form.get("current_password") || "");
   const newPassword = String(form.get("new_password") || "");
   const confirmPassword = String(form.get("confirm_password") || "");
   const lang = getLang(request, user);
   const L = t(lang);
+
+  if (!currentPassword) {
+    return json({ error: L.currentPasswordRequired || "Please enter current password" }, 400);
+  }
+
+  // Xác minh mật khẩu hiện tại trong DB
+  const dbUser = await env.DB.prepare(
+    "SELECT password_hash, password_salt FROM techops_users WHERE id = ?"
+  ).bind(user.id).first();
+
+  if (!dbUser) {
+    return json({ error: L.notFoundPlain }, 404);
+  }
+
+  const isCurrentValid = await verifyPassword(currentPassword, dbUser.password_salt, dbUser.password_hash);
+  if (!isCurrentValid) {
+    return json({ error: L.currentPasswordIncorrect }, 400);
+  }
+
   if (!newPassword || newPassword.length < 8) {
     return json({ error: L.passwordMinLength }, 400);
   }

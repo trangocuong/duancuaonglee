@@ -3,6 +3,31 @@
  */
 
 export const DAILY_DICTIONARY = {
+  "classificationStandardHeading": {
+    "ko": "일일보고 분류 기준",
+    "en": "Daily Report Classification Standard",
+    "vi": "Tiêu chuẩn phân loại báo cáo hàng ngày"
+  },
+  "standardAppliedNotice": {
+    "ko": "표준 분류와 LOTID를 적용하고 기존 보고 이력을 삭제했습니다.",
+    "en": "Applied standard classification and LOTID, and cleared previous report history.",
+    "vi": "Đã áp dụng phân loại tiêu chuẩn và LOTID, đồng thời xóa lịch sử báo cáo cũ."
+  },
+  "standardDesc": {
+    "ko": "MDL·SSD 통합관리기준의 70개 조합을 사용합니다. 화면에서는 기존 파트명에 맞춰 MDL을 Module로 표시합니다.",
+    "en": "Uses 70 combinations of MDL·SSD integrated management criteria. MDL is displayed as Module.",
+    "vi": "Sử dụng 70 tổ hợp tiêu chuẩn quản lý tích hợp MDL·SSD. Trên màn hình MDL hiển thị là Module."
+  },
+  "applyStandardBtn": {
+    "ko": "표준 설정 적용",
+    "en": "Apply Standard Configuration",
+    "vi": "Áp dụng cấu hình tiêu chuẩn"
+  },
+  "applyStandardConfirm": {
+    "ko": "기존 일일보고 이력과 현재 항목 설정을 삭제하고 표준 설정으로 교체합니다. 계속하시겠습니까?",
+    "en": "This will delete all existing daily report history and replace current field settings with the standard configuration. Do you want to continue?",
+    "vi": "Thao tác này sẽ XÓA TOÀN BỘ lịch sử báo cáo cũ và thay thế cài đặt trường hiện tại bằng cấu hình chuẩn. Bạn có chắc chắn muốn tiếp tục?"
+  },
   "fieldTitle": {
     "ko": "제목",
     "en": "Title",

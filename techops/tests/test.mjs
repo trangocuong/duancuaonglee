@@ -6,6 +6,7 @@ import worker from "../worker.js";
 import { testUserManagement } from "./test-user-management.mjs";
 import { testLotSteps } from "./test-lot-steps.mjs";
 import { testTranslationEfficiency } from "./test-translation.mjs";
+import { testNewFeatures } from "./test-new-features.mjs";
 import { fieldCsv, parseFieldCsv } from "../src/modules/daily/daily-field-csv.js";
 import { DAILY_CLASSIFICATION_FIELDS, DAILY_CLASSIFICATION_ROWS } from "../src/config/daily-config.js";
 
@@ -1553,6 +1554,7 @@ async function main() {
   await testLotSteps({ check, env, viewerHeaders });
   await testUserManagement({ db, env, check, adminHeaders: adminHeaders2 });
   await testTranslationEfficiency({ check, makeEnv: (database) => ({ DB: new D1Shim(database) }) });
+  await testNewFeatures({ check, env, db, adminHeaders: adminHeaders2 });
   console.log(`\n${pass} passed, ${fail} failed`);
   if (fail > 0) process.exit(1);
 }

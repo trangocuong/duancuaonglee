@@ -584,6 +584,8 @@ export function layout({ title, user, lang, body, activeNav, activeSubNav = "", 
     </div>
     <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
       <div id="changePassMsg" class="modal-msg" style="display:none;"></div>
+      <label>${escapeHtml(L.currentPasswordLabel || "Current Password")}</label>
+      <input type="password" name="current_password" required placeholder="••••••••" autocomplete="current-password">
       <label>${escapeHtml(L.newPasswordMin8)}</label>
       <input type="password" name="new_password" required minlength="8" placeholder="••••••••" autocomplete="new-password">
       <label>${escapeHtml(L.confirmNewPassword)}</label>
@@ -677,5 +679,5 @@ export function pageMenuPlaceholder(request, user, page) {
 }
 
 export function forbiddenResponse(user, lang, L) {
-  return html(layout({ title: L.notFoundTitle, user, lang, body: `<div class="card">${escapeHtml(L.adminOnlyNotice)}</div>` }), 403);
+  return html(layout({ title: L.forbiddenTitle || L.notFoundTitle, user, lang, body: `<div class="card">${escapeHtml(L.adminOnlyNotice)}</div>` }), 403);
 }

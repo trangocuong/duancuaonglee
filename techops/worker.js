@@ -15,7 +15,7 @@ import {
   apiListTasks, apiListReports, apiCreateReport,
 } from "./src/routes/tasks.js";
 import {
-  pageMasterIndex, pageMasterList, pageMasterRowDetail, pageMasterSetup,
+  pageMasterIndex, pageMasterList, pageMasterRowDetail, handleMasterRowCreate, handleMasterRowUpdate, handleMasterRowDelete, pageMasterSetup,
   handleMasterSetCreate, handleMasterSetUpdate, pageMasterSetDetail,
   handleMasterFieldCreate, pageMasterFieldDetail, handleMasterFieldUpdate,
   handleMasterFieldDelete, handleMasterFieldMove,
@@ -31,7 +31,7 @@ import {
   handleDailyFieldTemplateApply, pageDailyFieldDetail,
   handleDailyFieldUpdate, handleDailyFieldDelete,
   handleDailyFieldMove, handleDailyFieldOptionCreate,
-  handleDailyFieldOptionDelete, handleDailyFieldOptionImport,
+  handleDailyFieldOptionDelete, handleDailyFieldOptionImport, handleDailyFieldOptionMove,
 } from "./src/routes/daily-fields.js";
 import { apiProductMatch } from "./src/modules/daily/daily-helpers.js";
 import {
@@ -153,6 +153,15 @@ export default {
       const masterFieldMoveMatch = path.match(/^\/master\/setup\/([A-Z][A-Z0-9_]*)\/fields\/(\d+)\/move$/);
       if (masterFieldMoveMatch && method === "POST") return handleMasterFieldMove(request, env, user, masterFieldMoveMatch[1], masterFieldMoveMatch[2]);
 
+      const masterRowCreateMatch = path.match(/^\/master\/([A-Z][A-Z0-9_]*)\/row\/new$/);
+      if (masterRowCreateMatch && method === "POST") return handleMasterRowCreate(request, env, user, masterRowCreateMatch[1]);
+
+      const masterRowEditMatch = path.match(/^\/master\/([A-Z][A-Z0-9_]*)\/row\/(\d+)\/edit$/);
+      if (masterRowEditMatch && method === "POST") return handleMasterRowUpdate(request, env, user, masterRowEditMatch[1], masterRowEditMatch[2]);
+
+      const masterRowDeleteMatch = path.match(/^\/master\/([A-Z][A-Z0-9_]*)\/row\/(\d+)\/delete$/);
+      if (masterRowDeleteMatch && method === "POST") return handleMasterRowDelete(request, env, user, masterRowDeleteMatch[1], masterRowDeleteMatch[2]);
+
       const masterRowDetailMatch = path.match(/^\/master\/([A-Z][A-Z0-9_]*)\/row\/(\d+)$/);
       if (masterRowDetailMatch && method === "GET") return pageMasterRowDetail(request, env, user, masterRowDetailMatch[1], masterRowDetailMatch[2]);
 
@@ -229,6 +238,9 @@ export default {
 
       const dailyFieldOptionDeleteMatch = path.match(/^\/daily-fields\/(\d+)\/options\/(\d+)\/delete$/);
       if (dailyFieldOptionDeleteMatch && method === "POST") return handleDailyFieldOptionDelete(request, env, user, dailyFieldOptionDeleteMatch[1], dailyFieldOptionDeleteMatch[2]);
+
+      const dailyFieldOptionMoveMatch = path.match(/^\/daily-fields\/(\d+)\/options\/(\d+)\/move$/);
+      if (dailyFieldOptionMoveMatch && method === "POST") return handleDailyFieldOptionMove(request, env, user, dailyFieldOptionMoveMatch[1], dailyFieldOptionMoveMatch[2]);
 
       const dailyFieldOptionImportMatch = path.match(/^\/daily-fields\/(\d+)\/options\/import$/);
       if (dailyFieldOptionImportMatch && method === "POST") return handleDailyFieldOptionImport(request, env, user, dailyFieldOptionImportMatch[1]);

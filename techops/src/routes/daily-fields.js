@@ -283,14 +283,14 @@ export async function pageDailyFields(request, env, user) {
     title: L.dailyFieldsHeading, user, lang, activeNav: "daily", mainClass: "daily-work-page", body: `
     ${dailyWorkSubtabs(L, "settings", user)}
     <div class="card">
-      <h2 style="margin-top:0;">일일보고 분류 기준</h2>
-      ${standardApplied ? `<p role="status">표준 분류와 LOTID를 적용하고 기존 보고 이력을 삭제했습니다.</p>` : ""}
-      <p class="muted">MDL·SSD 통합관리기준의 70개 조합을 사용합니다. 화면에서는 기존 파트명에 맞춰 MDL을 Module로 표시합니다.</p>
+      <h2 style="margin-top:0;">${escapeHtml(L.classificationStandardHeading || "일일보고 분류 기준")}</h2>
+      ${standardApplied ? `<p role="status">${escapeHtml(L.standardAppliedNotice || "표준 분류와 LOTID를 적용하고 기존 보고 이력을 삭제했습니다.")}</p>` : ""}
+      <p class="muted">${escapeHtml(L.standardDesc || "MDL·SSD 통합관리기준의 70개 조합을 사용합니다. 화면에서는 기존 파트명에 맞춰 MDL을 Module로 표시합니다.")}</p>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;">
         ${[...DAILY_CLASSIFICATION_FIELDS, "Product Info.", "LOTID", "LOT 조회 결과"].map((label, index, all) => `<span style="display:flex;gap:8px;align-items:center;"><strong style="padding:8px 12px;background:var(--accent-soft);color:var(--accent-soft-text);border-radius:6px;">${escapeHtml(label)}</strong>${index < all.length - 1 ? "→" : ""}</span>`).join("")}
       </div>
-      <form method="post" action="/daily-fields/apply-standard" onsubmit="return confirm('기존 일일보고 이력과 현재 항목 설정을 삭제하고 표준 설정으로 교체합니다. 계속하시겠습니까?');">
-        <button type="submit">표준 설정 적용</button>
+      <form method="post" action="/daily-fields/apply-standard" onsubmit="return confirm('${escapeHtml(L.applyStandardConfirm || "기존 일일보고 이력과 현재 항목 설정을 삭제하고 표준 설정으로 교체합니다. 계속하시겠습니까?")}');">
+        <button type="submit" class="secondary">${escapeHtml(L.applyStandardBtn || "표준 설정 적용")}</button>
       </form>
     </div>
     <div class="card">
@@ -472,7 +472,7 @@ export async function pageDailyFieldDetail(request, env, user, id) {
       ${parentRequiredNotice ? `<p class="err">${escapeHtml(parentRequiredNotice)}</p>` : ""}
       ${addOptionForm}
       <table>
-        ${dependsOnField ? `<thead><tr><th>${escapeHtml(L.colParentOption)}</th><th>${escapeHtml(L.fieldLabel)}</th><th></th></tr></thead>` : ""}
+        <thead><tr><th></th>${dependsOnField ? `<th>${escapeHtml(L.colParentOption)}</th>` : ""}<th>${escapeHtml(L.fieldLabel)}</th><th></th></tr></thead>
         <tbody>${optionRows || `<tr><td colspan="${dependsOnField ? 3 : 2}" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
       </table>
     </div>
@@ -661,4 +661,42 @@ export async function handleDailyFieldOptionImport(request, env, user, id) {
 }
 
 // #endregion
-
+
+export async function handleDailyFieldOptionMove(request, env, user, fieldId, optionId) {
+  if (user.role !== "admin") return redirect(`/daily-fields/${fieldId}`);
+  const form = await request.formData();
+  const direction = String(form.get("direction") || "");
+
+  const option = await env.DB.prepare(
+    `SELECT id, field_id, sort_order, parent_option_id FROM tech_daily_field_option WHERE id = ? AND field_id = ?`
+  ).bind(optionId, fieldId).first();
+  if (!option) return redirect(`/daily-fields/${fieldId}`);
+
+  const parentClause = option.parent_option_id === null
+    ? `parent_option_id IS NULL`
+    : `parent_option_id = ?`;
+  const parentParams = option.parent_option_id === null ? [] : [option.parent_option_id];
+
+  const neighbor = direction === "up"
+    ? await env.DB.prepare(
+        `SELECT id, sort_order FROM tech_daily_field_option 
+          WHERE field_id = ? AND ${parentClause} AND ((sort_order < ?) OR (sort_order = ? AND id < ?))
+          ORDER BY sort_order DESC, id DESC LIMIT 1`
+      ).bind(fieldId, ...parentParams, option.sort_order, option.sort_order, option.id).first()
+    : direction === "down"
+    ? await env.DB.prepare(
+        `SELECT id, sort_order FROM tech_daily_field_option 
+          WHERE field_id = ? AND ${parentClause} AND ((sort_order > ?) OR (sort_order = ? AND id > ?))
+          ORDER BY sort_order ASC, id ASC LIMIT 1`
+      ).bind(fieldId, ...parentParams, option.sort_order, option.sort_order, option.id).first()
+    : null;
+
+  if (neighbor) {
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE tech_daily_field_option SET sort_order = ? WHERE id = ?`).bind(neighbor.sort_order, option.id),
+      env.DB.prepare(`UPDATE tech_daily_field_option SET sort_order = ? WHERE id = ?`).bind(option.sort_order, neighbor.id),
+    ]);
+  }
+
+  return redirect(`/daily-fields/${fieldId}`);
+}

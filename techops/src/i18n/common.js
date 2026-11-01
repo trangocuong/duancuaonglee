@@ -83,6 +83,11 @@ export const COMMON_DICTIONARY = {
     "en": "Please enter a valid report date.",
     "vi": "Vui lòng nhập ngày báo cáo hợp lệ."
   },
+  "forbiddenTitle": {
+    "ko": "접근 제한",
+    "en": "Access Denied",
+    "vi": "Không có quyền truy cập"
+  },
   "forbidden": {
     "ko": "접근 권한이 없습니다.",
     "en": "You do not have permission to access this resource.",

@@ -3,6 +3,31 @@
  */
 
 export const MASTER_DICTIONARY = {
+  "masterAddRowBtn": {
+    "ko": "데이터 추가",
+    "en": "Add Data",
+    "vi": "Thêm dữ liệu"
+  },
+  "masterNewRowHeading": {
+    "ko": "새 데이터 등록",
+    "en": "New Data Entry",
+    "vi": "Đăng ký dữ liệu mới"
+  },
+  "masterEditRowHeading": {
+    "ko": "데이터 수정",
+    "en": "Edit Data",
+    "vi": "Chỉnh sửa dữ liệu"
+  },
+  "masterDeleteRowConfirm": {
+    "ko": "이 데이터를 삭제하시겠습니까?",
+    "en": "Are you sure you want to delete this record?",
+    "vi": "Bạn có chắc chắn muốn xóa dữ liệu này?"
+  },
+  "masterRowKeyLabel": {
+    "ko": "식별키 (Row Key)",
+    "en": "Record Key",
+    "vi": "Mã định danh"
+  },
   "masterIndexHeading": {
     "ko": "기준정보",
     "en": "Master Data",

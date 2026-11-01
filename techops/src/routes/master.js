@@ -587,4 +587,110 @@ export async function handleMasterFieldMove(request, env, user, code, fieldId) {
 }
 
 
-// #endregion
+// #endregion
+export async function handleMasterRowCreate(request, env, user, code) {
+  const lang = getLang(request);
+  const L = t(lang);
+  if (user.role !== "admin") return forbiddenResponse(user, lang, L);
+
+  const set = await loadMasterSet(env, code);
+  if (!set || !set.active) return redirect("/master");
+
+  const fields = await loadMasterFields(env, set.id);
+  const form = await request.formData();
+
+  const data = {};
+  for (const f of fields) {
+    const val = String(form.get(`field_${f.code}`) || "").trim();
+    if (val) data[f.code] = val;
+  }
+
+  const keyField = fields.find(f => f.is_key);
+  let rowKey = keyField && data[keyField.code] ? data[keyField.code] : String(form.get("row_key") || "").trim();
+  if (!rowKey) {
+    rowKey = `${set.code}_${Date.now()}`;
+  }
+
+  const verifyStatus = ["OK", "CHECK", "ERROR"].includes(form.get("verify_status")) ? form.get("verify_status") : "OK";
+  const verifyNote = String(form.get("verify_note") || "").trim() || null;
+
+  try {
+    const res = await env.DB.prepare(
+      `INSERT INTO tech_master_row (set_id, row_key, data_json, verify_status, verify_note, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(set.id, rowKey, JSON.stringify(data), verifyStatus, verifyNote, user.id, user.id).run();
+
+    const rowId = res.meta?.last_row_id;
+    await env.DB.prepare(
+      `INSERT INTO tech_master_log (set_id, row_id, row_key, action, actor_user_id)
+       VALUES (?, ?, ?, 'INSERT', ?)`
+    ).bind(set.id, rowId, rowKey, user.id).run();
+  } catch (err) {
+    console.error("handleMasterRowCreate error:", err);
+  }
+
+  return redirect(`/master/${set.code}`);
+}
+
+export async function handleMasterRowUpdate(request, env, user, code, id) {
+  const lang = getLang(request);
+  const L = t(lang);
+  if (user.role !== "admin") return forbiddenResponse(user, lang, L);
+
+  const set = await loadMasterSet(env, code);
+  if (!set || !set.active) return redirect("/master");
+
+  const row = await env.DB.prepare(`SELECT * FROM tech_master_row WHERE id = ? AND set_id = ?`).bind(id, set.id).first();
+  if (!row) return redirect(`/master/${set.code}`);
+
+  const fields = await loadMasterFields(env, set.id);
+  const form = await request.formData();
+
+  const data = {};
+  for (const f of fields) {
+    const val = String(form.get(`field_${f.code}`) || "").trim();
+    if (val) data[f.code] = val;
+  }
+
+  const keyField = fields.find(f => f.is_key);
+  let rowKey = keyField && data[keyField.code] ? data[keyField.code] : row.row_key;
+
+  const verifyStatus = ["OK", "CHECK", "ERROR"].includes(form.get("verify_status")) ? form.get("verify_status") : row.verify_status;
+  const verifyNote = String(form.get("verify_note") || "").trim() || null;
+
+  try {
+    await env.DB.prepare(
+      `UPDATE tech_master_row SET row_key = ?, data_json = ?, verify_status = ?, verify_note = ?, updated_by = ?, updated_at = datetime('now')
+       WHERE id = ? AND set_id = ?`
+    ).bind(rowKey, JSON.stringify(data), verifyStatus, verifyNote, user.id, id, set.id).run();
+
+    await env.DB.prepare(
+      `INSERT INTO tech_master_log (set_id, row_id, row_key, action, actor_user_id)
+       VALUES (?, ?, ?, 'UPDATE', ?)`
+    ).bind(set.id, id, rowKey, user.id).run();
+  } catch (err) {
+    console.error("handleMasterRowUpdate error:", err);
+  }
+
+  return redirect(`/master/${set.code}/row/${id}`);
+}
+
+export async function handleMasterRowDelete(request, env, user, code, id) {
+  const lang = getLang(request);
+  const L = t(lang);
+  if (user.role !== "admin") return forbiddenResponse(user, lang, L);
+
+  const set = await loadMasterSet(env, code);
+  if (!set || !set.active) return redirect("/master");
+
+  const row = await env.DB.prepare(`SELECT * FROM tech_master_row WHERE id = ? AND set_id = ?`).bind(id, set.id).first();
+  if (row) {
+    await env.DB.prepare(`DELETE FROM tech_master_row WHERE id = ? AND set_id = ?`).bind(id, set.id).run();
+    await env.DB.prepare(
+      `INSERT INTO tech_master_log (set_id, row_id, row_key, action, actor_user_id)
+       VALUES (?, ?, ?, 'DELETE', ?)`
+    ).bind(set.id, id, row.row_key, user.id).run();
+  }
+
+  return redirect(`/master/${set.code}`);
+}
