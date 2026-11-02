@@ -16,7 +16,7 @@ import {
 } from "./daily-fields.js";
 import {
   attachFieldValues, getUpdateFieldMap, getUpdateRawFieldMap, firstDailyValue,
-  dailyGoodDefectValues, isIssueStatus, isDoneStatus, dailyAttentionItems, renderFieldInput,
+  dailyGoodDefectValues, isIssueStatus, isDoneStatus, dailyAttentionItems, renderFieldInput, CASCADING_SELECT_SCRIPT,
 } from "../modules/daily/daily-helpers.js";
 
 export const STALE_THRESHOLD_DAYS = 3;
@@ -297,8 +297,7 @@ export async function pageDailyReports(request, env, user) {
       <td>${escapeHtml(item.latest_date || "-")}</td>
     </tr>`).join("");
 
-  const categoryField = allFields.find(f => f.label === "업무구분" || f.label === "Phân loại công việc");
-  const fixedFields = allFields.filter(f => f.field_scope === "item" && f.label !== "업무구분" && f.label !== "Phân loại công việc");
+  const fixedFields = allFields.filter(f => f.field_scope === "item");
   const fixedInputs = fixedFields.map(f => `
     <div>
       <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(resolveFieldLabel(f, lang, reportTextTranslations))}${f.is_required ? ' <span style="color:var(--danger)">*</span>' : ''}</label>
@@ -308,36 +307,33 @@ export async function pageDailyReports(request, env, user) {
 
   const modalHtml = `
   <dialog id="create-item-dialog" style="border:none;border-radius:12px;padding:0;max-width:560px;width:92vw;box-shadow:0 12px 32px rgba(0,0,0,0.35);background:var(--card-bg, #1a202c);color:inherit;">
+    <style>
+      #create-item-dialog select, #create-item-dialog input, #create-item-dialog textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: inherit;
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+    </style>
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
       <h3 style="margin:0;font-size:16px;">✨ ${escapeHtml(lang === "vi" ? "Tạo công việc mới" : "새 일일업무 등록")}</h3>
       <button type="button" onclick="document.getElementById('create-item-dialog').close()" style="background:none;border:none;font-size:18px;cursor:pointer;color:inherit;padding:4px 8px;">✕</button>
     </div>
     <form method="post" action="/daily-items/new" style="padding:20px;">
       <div style="display:flex;flex-direction:column;gap:14px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colPart)} <span style="color:var(--danger)">*</span></label>
-            <select name="part" id="modal-item-part" required style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);">
-              <option value="SSD">SSD</option>
-              <option value="Module">Module</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colCategory)} <span style="color:var(--danger)">*</span></label>
-            <select name="category" id="modal-item-category" required style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);">
-              ${categoryField ? categoryField.options.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(resolveOptionValue(o.value, lang, reportTextTranslations))}</option>`).join("") : WORK_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join("")}
-            </select>
-          </div>
-        </div>
+        ${fixedInputs}
         <div>
           <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colTitle)} <span style="color:var(--danger)">*</span></label>
-          <input name="title" required placeholder="${escapeHtml(lang === "vi" ? "Ví dụ: Đánh giá FW NVMe SSD..." : "업무 제목을 입력하세요")}" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);box-sizing:border-box;">
+          <input name="title" required placeholder="${escapeHtml(lang === "vi" ? "Ví dụ: Đánh giá FW NVMe SSD..." : "업무 제목을 입력하세요")}">
         </div>
         <div>
           <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colAssignee)}</label>
-          <input value="${escapeHtml(user.display_name)}" readonly aria-readonly="true" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.05);box-sizing:border-box;">
+          <input value="${escapeHtml(user.display_name)}" readonly aria-readonly="true" style="background:rgba(255,255,255,0.05);">
         </div>
-        ${fixedInputs}
       </div>
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid var(--border);padding-top:14px;">
         <button type="button" class="secondary" onclick="document.getElementById('create-item-dialog').close()">${escapeHtml(L.cancel)}</button>
@@ -351,7 +347,7 @@ export async function pageDailyReports(request, env, user) {
     ${dailyWorkSubtabs(L, "report", user)}
     <header class="daily-heading">
       <div><h2>${escapeHtml(L.dailyReportsHeading)}</h2><p class="muted no-print">${escapeHtml(U.intro)}</p></div>
-      <a class="daily-primary no-print" href="/daily-items" onclick="event.preventDefault(); document.getElementById('create-item-dialog').showModal();">+ ${escapeHtml(lang === "vi" ? "Tạo công việc mới" : U.write)}</a>
+      <a class="daily-primary no-print" href="/daily-items" onclick="event.preventDefault(); document.getElementById('create-item-dialog').showModal(); if (window.initCascadingSelects) window.initCascadingSelects();">+ ${escapeHtml(lang === "vi" ? "Tạo công việc mới" : U.write)}</a>
     </header>
     <div class="card daily-toolbar no-print">
       <form method="get" action="/daily-reports" class="daily-filter">
@@ -374,7 +370,7 @@ export async function pageDailyReports(request, env, user) {
       <p class="muted">${escapeHtml(selectedDate || "")} · ${totalCount} ${escapeHtml(U.count)} ${actions.length ? ` · <a class="no-print" href="#daily-attention">${escapeHtml(L.actionRequired)} (${actions.length})</a>` : ""}</p>
       <button type="button" class="secondary no-print" onclick="window.print()">${escapeHtml(L.printBtn)}</button>
     </div>
-    ${sections || `<div class="card daily-empty"><h3>${escapeHtml(U.empty)}</h3><p class="muted">${escapeHtml(U.emptyHelp)}</p><a class="daily-primary" href="/daily-items" onclick="event.preventDefault(); document.getElementById('create-item-dialog').showModal();">${escapeHtml(U.write)}</a></div>`}
+    ${sections || `<div class="card daily-empty"><h3>${escapeHtml(U.empty)}</h3><p class="muted">${escapeHtml(U.emptyHelp)}</p><a class="daily-primary" href="/daily-items" onclick="event.preventDefault(); document.getElementById('create-item-dialog').showModal(); if (window.initCascadingSelects) window.initCascadingSelects();">${escapeHtml(U.write)}</a></div>`}
     <details id="daily-attention" class="card daily-followup no-print" ${actions.length ? "open" : ""}>
       <summary>${escapeHtml(L.actionRequired)} (${actions.length})</summary>
       ${actions.length ? `<div style="overflow-x:auto;"><table>
@@ -396,5 +392,6 @@ export async function pageDailyReports(request, env, user) {
       </div>
     </details>` : ""}
     ${modalHtml}
+    ${CASCADING_SELECT_SCRIPT}
 ` }));
 }

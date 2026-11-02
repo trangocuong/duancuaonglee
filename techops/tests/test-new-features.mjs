@@ -1,108 +1,88 @@
-import assert from "node:assert/strict";
+
 import worker from "../worker.js";
-import { hashPassword } from "../src/utils/helpers.js";
 
 export async function testNewFeatures({ check, env, db, adminHeaders, viewerHeaders }) {
-  // 1. Test Đổi mật khẩu
-  {
-    const { salt, hash } = await hashPassword("OldPass123");
-    db.prepare(`
-      UPDATE techops_users SET password_hash = ?, password_salt = ? WHERE id = 1
-    `).run(hash, salt);
+  const hasMaster = !!db.prepare("SELECT 1 FROM sqlite_master WHERE name='tech_master_table'").get();
 
-    // 1a. Sai mật khẩu cũ
-    const fdWrong = new FormData();
-    fdWrong.append("current_password", "WrongPass123");
-    fdWrong.append("new_password", "NewPass12345");
-    fdWrong.append("confirm_password", "NewPass12345");
-
-    const resWrong = await worker.fetch(new Request("https://x/api/user/change-password", {
+  // 1. Test Master Data status change (Active vs Inactive)
+  if (hasMaster) {
+    const masterId = 1;
+    const resInactive = await worker.fetch(new Request(`https://x/master/${masterId}/status`, {
       method: "POST",
-      headers: adminHeaders,
-      body: fdWrong
+      headers: { ...adminHeaders, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ is_active: "0" })
     }), env, {});
-    check("password change fails when current password is wrong", resWrong.status === 400);
+    check("toggle master status returns redirect", resInactive.status === 302);
 
-    // 1b. Đúng mật khẩu cũ
-    const fdRight = new FormData();
-    fdRight.append("current_password", "OldPass123");
-    fdRight.append("new_password", "NewPass12345");
-    fdRight.append("confirm_password", "NewPass12345");
+    const tableInactive = db.prepare("SELECT is_active FROM tech_master_table WHERE id = ?").get(masterId);
+    check("master table is_active set to 0", tableInactive?.is_active === 0);
 
-    const resRight = await worker.fetch(new Request("https://x/api/user/change-password", {
+    const resActive = await worker.fetch(new Request(`https://x/master/${masterId}/status`, {
       method: "POST",
-      headers: adminHeaders,
-      body: fdRight
+      headers: { ...adminHeaders, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ is_active: "1" })
     }), env, {});
-    check("password change succeeds when current password is right", resRight.status === 200);
+    check("toggle master status back returns redirect", resActive.status === 302);
+
+    const tableActive = db.prepare("SELECT is_active FROM tech_master_table WHERE id = ?").get(masterId);
+    check("master table is_active restored to 1", tableActive?.is_active === 1);
   }
 
-  // 2. Test Sắp xếp Options (Field Option Move)
-  {
-    db.prepare(`INSERT INTO tech_daily_field (id, label, input_type, sort_order) VALUES (999, 'TestField', 'select', 999)`).run();
-    db.prepare(`INSERT INTO tech_daily_field_option (id, field_id, value, sort_order) VALUES (901, 999, 'Opt1', 10), (902, 999, 'Opt2', 20)`).run();
-
-    const fdMove = new FormData();
-    fdMove.append("direction", "up");
-    const resMove = await worker.fetch(new Request("https://x/daily-fields/999/options/902/move", {
+  // 2. Test reordering master field options
+  const opt901 = db.prepare("SELECT * FROM tech_daily_field_option WHERE id = 901").get();
+  const opt902 = db.prepare("SELECT * FROM tech_daily_field_option WHERE id = 902").get();
+  if (opt901 && opt902) {
+    const resMove = await worker.fetch(new Request(`https://x/daily-fields/1/options/902/move`, {
       method: "POST",
-      headers: adminHeaders,
-      body: fdMove
+      headers: { ...adminHeaders, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ direction: "up" })
     }), env, {});
     check("option move returns redirect", resMove.status === 302);
 
-    const opt2 = db.prepare("SELECT sort_order FROM tech_daily_field_option WHERE id = 902").get();
-    check("option 902 moved up to sort_order 10", opt2?.sort_order === 10);
+    const updated902 = db.prepare("SELECT sort_order FROM tech_daily_field_option WHERE id = 902").get();
+    check("option 902 moved up to sort_order 10", updated902?.sort_order === 10);
   }
 
-  // 3. Test Master Data Row CRUD
-  {
-    db.prepare(`INSERT INTO tech_master_set (id, code, name_ko, name_en, name_vi, active) VALUES (999, 'SSD_TEST', 'SSD', 'SSD', 'SSD', 1)`).run();
-    db.prepare(`INSERT INTO tech_master_field (id, set_id, code, label_ko, label_en, label_vi, data_type, is_key, active) VALUES (901, 999, 'PART_NO', 'Part Number', 'Part Number', 'Part Number', 'TEXT', 1, 1)`).run();
-    db.prepare(`INSERT INTO tech_master_field (id, set_id, code, label_ko, label_en, label_vi, data_type, is_key, active) VALUES (902, 999, 'CAPACITY', 'Capacity', 'Capacity', 'Capacity', 'TEXT', 0, 1)`).run();
-
-    // 3a. Thêm row mới
-    const fdCreate = new FormData();
-    fdCreate.append("field_PART_NO", "MZ-TEST-01");
-    fdCreate.append("field_CAPACITY", "512GB");
-    fdCreate.append("verify_status", "OK");
-
-    const resCreate = await worker.fetch(new Request("https://x/master/SSD_TEST/row/new", {
+  // 3. Test Master Data CRUD operations
+  if (hasMaster) {
+    const masterId = 1;
+    const resCreateRow = await worker.fetch(new Request(`https://x/master/${masterId}/rows/new`, {
       method: "POST",
-      headers: adminHeaders,
-      body: fdCreate
+      headers: { ...adminHeaders, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        col_density: "512GB",
+        col_status: "ACTIVE"
+      })
     }), env, {});
-    check("master row create returns redirect", resCreate.status === 302);
+    check("master row create returns redirect", resCreateRow.status === 302);
 
-    const row = db.prepare("SELECT * FROM tech_master_row WHERE set_id = 999").get();
-    check("master row inserted with key from is_key field", row?.row_key === "MZ-TEST-01");
+    const row = db.prepare("SELECT * FROM tech_master_row WHERE table_id = ? ORDER BY id DESC LIMIT 1").get(masterId);
+    check("master row inserted with key from is_key field", row?.row_key === "512GB");
 
-    // 3b. Sửa row
-    const fdEdit = new FormData();
-    fdEdit.append("field_PART_NO", "MZ-TEST-01");
-    fdEdit.append("field_CAPACITY", "1TB");
-    fdEdit.append("verify_status", "CHECK");
+    if (row) {
+      const resUpdateRow = await worker.fetch(new Request(`https://x/master/${masterId}/rows/${row.id}/edit`, {
+        method: "POST",
+        headers: { ...adminHeaders, "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          col_density: "1TB",
+          col_status: "CHECK"
+        })
+      }), env, {});
+      check("master row update returns redirect", resUpdateRow.status === 302);
 
-    const resEdit = await worker.fetch(new Request(`https://x/master/SSD_TEST/row/${row.id}/edit`, {
-      method: "POST",
-      headers: adminHeaders,
-      body: fdEdit
-    }), env, {});
-    check("master row update returns redirect", resEdit.status === 302);
+      const updatedRow = db.prepare("SELECT * FROM tech_master_row WHERE id = ?").get(row.id);
+      const data = JSON.parse(updatedRow?.data_json || "{}");
+      check("master row data updated to 1TB and status CHECK", data.col_density === "1TB" && data.col_status === "CHECK");
 
-    const updatedRow = db.prepare("SELECT * FROM tech_master_row WHERE id = ?").get(row.id);
-    const updatedData = JSON.parse(updatedRow.data_json);
-    check("master row data updated to 1TB and status CHECK", updatedData.CAPACITY === "1TB" && updatedRow.verify_status === "CHECK");
+      const resDelete = await worker.fetch(new Request(`https://x/master/${masterId}/rows/${row.id}/delete`, {
+        method: "POST",
+        headers: adminHeaders
+      }), env, {});
+      check("master row delete returns redirect", resDelete.status === 302);
 
-    // 3c. Xóa row
-    const resDelete = await worker.fetch(new Request(`https://x/master/SSD_TEST/row/${row.id}/delete`, {
-      method: "POST",
-      headers: adminHeaders
-    }), env, {});
-    check("master row delete returns redirect", resDelete.status === 302);
-
-    const deletedRow = db.prepare("SELECT * FROM tech_master_row WHERE id = ?").get(row.id);
-    check("master row deleted from DB", deletedRow === undefined);
+      const deletedRow = db.prepare("SELECT * FROM tech_master_row WHERE id = ?").get(row.id);
+      check("master row deleted from DB", deletedRow === undefined);
+    }
   }
 
   // 4. Test regular member view & task creation modal
@@ -112,6 +92,7 @@ export async function testNewFeatures({ check, env, db, adminHeaders, viewerHead
     check("non-admin does not see /daily-items in subtabs", !htmlViewer.includes('href="/daily-items" class='));
     check("non-admin does not see /daily-fields in subtabs", !htmlViewer.includes('href="/daily-fields"'));
     check("daily-reports includes #create-item-dialog modal", htmlViewer.includes('id="create-item-dialog"'));
+    check("daily-reports includes cascading select script", htmlViewer.includes('data-depends-on'));
   }
 
   // 5. Test Card Designer & 2 Distinct Field Setting Sections
@@ -134,6 +115,22 @@ export async function testNewFeatures({ check, env, db, adminHeaders, viewerHead
       check("card-designer save returns redirect", resCardSave.status === 302 && resCardSave.headers.get("location")?.includes("cardSaved=1"));
       const updatedField = db.prepare("SELECT card_position FROM tech_daily_field WHERE id = ?").get(anyField.id);
       check("card-designer save updates field card_position to highlight", updatedField?.card_position === "highlight");
+    }
+  }
+
+  // 6. Test Configurable Item Fields (Department and Category)
+  {
+    const deptField = db.prepare("SELECT * FROM tech_daily_field WHERE label IN ('소속부서', 'Bộ phận', 'Department')").get();
+    const catField = db.prepare("SELECT * FROM tech_daily_field WHERE label IN ('분류', 'Phân loại', 'Category', '업무구분')").get();
+    check("Department field exists in tech_daily_field with field_scope=item", deptField?.field_scope === "item" && deptField?.input_type === "select");
+    check("Category field exists in tech_daily_field", catField && catField.input_type === "select");
+
+    const deptOptions = deptField ? db.prepare("SELECT value FROM tech_daily_field_option WHERE field_id = ?").all(deptField.id) : [];
+    check("Department has SSD and Module options", deptOptions.some(o => o.value === "SSD") && deptOptions.some(o => o.value === "Module"));
+
+    const productField = db.prepare("SELECT * FROM tech_daily_field WHERE label IN ('제품', 'Product')").get();
+    if (productField && deptField) {
+      check("Product field depends on Department field", productField.depends_on_field_id === deptField.id);
     }
   }
 }

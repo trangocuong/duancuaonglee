@@ -81,14 +81,14 @@ export function hasDailyClassification(fields) {
 }
 
 export const DAILY_REPORT_FIELD_TEMPLATE = [
-  ["소속부서", "Department", "Bộ phận", "select", 10],
-  ["업무구분", "Work Category", "Phân loại công việc", "select", 20],
-  ["업무유형", "Work Type", "Loại công việc", "select", 30],
-  ["중분류", "Subcategory", "Phân loại phụ", "select", 40],
-  ["소분류", "Detail Category", "Phân loại chi tiết", "select", 50],
-  ["추가입력", "Additional Input", "Thông tin bổ sung", "text", 60],
-  ["파트넘버", "Part Number", "Mã linh kiện", "textarea", 70],
-  ["LOTID", "LOTID", "LOTID", "textarea", 80],
+  ["소속부서", "Department", "Bộ phận", "select", 10, "item"],
+  ["업무구분", "Work Category", "Phân loại công việc", "select", 20, "update"],
+  ["업무유형", "Work Type", "Loại công việc", "select", 30, "update"],
+  ["중분류", "Subcategory", "Phân loại phụ", "select", 40, "update"],
+  ["소분류", "Detail Category", "Phân loại chi tiết", "select", 50, "update"],
+  ["추가입력", "Additional Input", "Thông tin bổ sung", "text", 60, "item"],
+  ["파트넘버", "Part Number", "Mã linh kiện", "textarea", 70, "item"],
+  ["LOTID", "LOTID", "LOTID", "textarea", 80, "update"],
 ];
 
 export async function applyDailyReportFieldTemplate(env) {
@@ -97,10 +97,10 @@ export async function applyDailyReportFieldTemplate(env) {
     env.DB.prepare("DELETE FROM tech_daily_report"),
     env.DB.prepare("DELETE FROM tech_daily_field"),
   ];
-  for (const [label, en, vi, inputType, order] of DAILY_REPORT_FIELD_TEMPLATE) {
+  for (const [label, en, vi, inputType, order, scope] of DAILY_REPORT_FIELD_TEMPLATE) {
     statements.push(env.DB.prepare(
-      "INSERT INTO tech_daily_field(label,label_en,label_vi,input_type,sort_order) VALUES (?,?,?,?,?)"
-    ).bind(label, en, vi, inputType, order));
+      "INSERT INTO tech_daily_field(label,label_en,label_vi,input_type,sort_order,field_scope) VALUES (?,?,?,?,?,?)"
+    ).bind(label, en, vi, inputType, order, scope || "update"));
   }
   DAILY_CLASSIFICATION_FIELDS.forEach((label, level) => {
     classificationOptions(level).forEach((value, index) => statements.push(env.DB.prepare(

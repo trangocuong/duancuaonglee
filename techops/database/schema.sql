@@ -198,6 +198,10 @@ CREATE TABLE IF NOT EXISTS tech_translation_cache (
 
 -- 제조기술 일일보고 표준 필드. 엔지니어/통역은 베트남어 UI에서 입력하고 관리자는 같은
 -- 데이터를 한국어로 조회한다. 이미 존재하는 필드는 건너뛰므로 운영 DB에도 재실행 가능하다.
+INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order, is_required, show_in_card, field_scope, card_position)
+  SELECT '소속부서', 'Department', 'Bộ phận', 'select', 1, 1, 1, 'item', 'badge' WHERE NOT EXISTS (SELECT 1 FROM tech_daily_field WHERE label IN ('소속부서', 'Bộ phận'));
+INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order, is_required, show_in_card, field_scope, card_position)
+  SELECT '분류', 'Category', 'Phân loại', 'select', 2, 1, 1, 'item', 'badge' WHERE NOT EXISTS (SELECT 1 FROM tech_daily_field WHERE label IN ('분류', 'Category') AND field_scope = 'item');
 INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order)
   SELECT '제품', 'Product', 'Sản phẩm', 'select', 10 WHERE NOT EXISTS (SELECT 1 FROM tech_daily_field WHERE label = '제품');
 INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order)
@@ -228,6 +232,26 @@ INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order)
   SELECT '다음 계획', 'Next Plan', 'Kế hoạch tiếp theo', 'textarea', 140 WHERE NOT EXISTS (SELECT 1 FROM tech_daily_field WHERE label = '다음 계획');
 INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order)
   SELECT '비고', 'Remark', 'Ghi chú', 'textarea', 150 WHERE NOT EXISTS (SELECT 1 FROM tech_daily_field WHERE label = '비고');
+
+INSERT INTO tech_daily_field_option (field_id, value, sort_order)
+  SELECT id, 'SSD', 10 FROM tech_daily_field f WHERE f.label IN ('소속부서', 'Bộ phận')
+    AND NOT EXISTS (SELECT 1 FROM tech_daily_field_option o WHERE o.field_id = f.id AND o.value = 'SSD');
+INSERT INTO tech_daily_field_option (field_id, value, sort_order)
+  SELECT id, 'Module', 20 FROM tech_daily_field f WHERE f.label IN ('소속부서', 'Bộ phận')
+    AND NOT EXISTS (SELECT 1 FROM tech_daily_field_option o WHERE o.field_id = f.id AND o.value = 'Module');
+
+INSERT INTO tech_daily_field_option (field_id, value, sort_order)
+  SELECT id, '평가', 10 FROM tech_daily_field f WHERE f.label IN ('분류', 'Phân loại') AND f.field_scope = 'item'
+    AND NOT EXISTS (SELECT 1 FROM tech_daily_field_option o WHERE o.field_id = f.id AND o.value = '평가');
+INSERT INTO tech_daily_field_option (field_id, value, sort_order)
+  SELECT id, '불량분석', 20 FROM tech_daily_field f WHERE f.label IN ('분류', 'Phân loại') AND f.field_scope = 'item'
+    AND NOT EXISTS (SELECT 1 FROM tech_daily_field_option o WHERE o.field_id = f.id AND o.value = '불량분석');
+INSERT INTO tech_daily_field_option (field_id, value, sort_order)
+  SELECT id, '이슈대응', 30 FROM tech_daily_field f WHERE f.label IN ('분류', 'Phân loại') AND f.field_scope = 'item'
+    AND NOT EXISTS (SELECT 1 FROM tech_daily_field_option o WHERE o.field_id = f.id AND o.value = '이슈대응');
+INSERT INTO tech_daily_field_option (field_id, value, sort_order)
+  SELECT id, '설비점검 모니터링', 40 FROM tech_daily_field f WHERE f.label IN ('분류', 'Phân loại') AND f.field_scope = 'item'
+    AND NOT EXISTS (SELECT 1 FROM tech_daily_field_option o WHERE o.field_id = f.id AND o.value = '설비점검 모니터링');
 
 -- 업무구분은 기존 한국어 기준값을 유지하지만, 상태는 언어와 무관한 영문 코드를 DB
 -- 기준값으로 저장하고 worker.js에서 화면 언어에 맞게 표시한다.

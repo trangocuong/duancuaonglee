@@ -154,36 +154,33 @@ export async function pageDailyItems(request, env, user) {
     </div>
     
 ${combinedEntry ? "" : `  <dialog id="create-item-dialog" style="border:none;border-radius:12px;padding:0;max-width:560px;width:92vw;box-shadow:0 12px 32px rgba(0,0,0,0.35);background:var(--card-bg, #1a202c);color:inherit;">
+    <style>
+      #create-item-dialog select, #create-item-dialog input, #create-item-dialog textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: inherit;
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+    </style>
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
       <h3 style="margin:0;font-size:16px;">✨ ${escapeHtml(lang === "vi" ? "Tạo công việc mới" : "새 일일업무 등록")}</h3>
       <button type="button" onclick="document.getElementById('create-item-dialog').close()" style="background:none;border:none;font-size:18px;cursor:pointer;color:inherit;padding:4px 8px;">✕</button>
     </div>
     <form method="post" action="/daily-items/new" style="padding:20px;">
       <div style="display:flex;flex-direction:column;gap:14px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colPart)} <span style="color:var(--danger)">*</span></label>
-            <select name="part" id="modal-item-part" required style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);">
-              <option value="SSD">SSD</option>
-              <option value="Module">Module</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colCategory)} <span style="color:var(--danger)">*</span></label>
-            <select name="category" id="modal-item-category" required style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);">
-              ${categorySelectOptions}
-            </select>
-          </div>
-        </div>
+        ${fixedItemInputs}
         <div>
           <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colTitle)} <span style="color:var(--danger)">*</span></label>
-          <input name="title" required placeholder="${escapeHtml(lang === "vi" ? "Ví dụ: Đánh giá FW NVMe SSD..." : "업무 제목을 입력하세요")}" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);box-sizing:border-box;">
+          <input name="title" required placeholder="${escapeHtml(lang === "vi" ? "Ví dụ: Đánh giá FW NVMe SSD..." : "업무 제목을 입력하세요")}">
         </div>
         <div>
           <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colAssignee)}</label>
-          <input value="${escapeHtml(user.display_name)}" readonly aria-readonly="true" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.05);box-sizing:border-box;">
+          <input value="${escapeHtml(user.display_name)}" readonly aria-readonly="true" style="background:rgba(255,255,255,0.05);">
         </div>
-        ${fixedItemInputs}
       </div>
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid var(--border);padding-top:14px;">
         <button type="button" class="secondary" onclick="document.getElementById('create-item-dialog').close()">${escapeHtml(L.cancel)}</button>
@@ -191,7 +188,7 @@ ${combinedEntry ? "" : `  <dialog id="create-item-dialog" style="border:none;bor
       </div>
     </form>
   </dialog>`}
-    ${combinedEntry ? CASCADING_SELECT_SCRIPT + dailyClassificationScript() + lotScript(lang) : ""}` }));
+    ${CASCADING_SELECT_SCRIPT}${combinedEntry ? dailyClassificationScript() + lotScript(lang) : ""}` }));
 }
 
 export async function handleDailyItemCreate(request, env, user) {
@@ -199,9 +196,16 @@ export async function handleDailyItemCreate(request, env, user) {
   const { fields } = await loadDailyFields(env);
   const combinedEntry = hasDailyClassification(fields);
   const classificationValue = (label) => String(form.get(`field_${fields.find((field) => field.label === label)?.id}`) || "").trim();
-  const part = combinedEntry ? classificationValue(DAILY_CLASSIFICATION_FIELDS[0]) : String(form.get("part") || "");
-  const rawCategory = combinedEntry ? classificationValue(DAILY_CLASSIFICATION_FIELDS[1]) : String(form.get("category") || "").trim();
-  const category = combinedEntry ? (rawCategory || null) : (WORK_CATEGORIES.includes(rawCategory) ? rawCategory : null);
+
+  const partField = fields.find(f => f.label === "소속부서" || f.label === "Bộ phận" || f.label === "부서" || f.label_vi === "Bộ phận" || f.label_en === "Department" || f.label === "Part");
+  const categoryField = fields.find(f => f.field_scope === "item" && (f.label === "분류" || f.label === "Phân loại" || f.label_vi === "Phân loại" || f.label_en === "Category"));
+
+  const formPart = String(form.get("part") || (partField ? form.get(`field_${partField.id}`) : "") || "").trim();
+  const formCategory = String(form.get("category") || (categoryField ? form.get(`field_${categoryField.id}`) : "") || "").trim();
+
+  const part = combinedEntry ? classificationValue(DAILY_CLASSIFICATION_FIELDS[0]) : (formPart || "SSD");
+  const rawCategory = combinedEntry ? classificationValue(DAILY_CLASSIFICATION_FIELDS[1]) : formCategory;
+  const category = combinedEntry ? (rawCategory || null) : (WORK_CATEGORIES.includes(rawCategory) || (categoryField && categoryField.options.some(o => o.value === rawCategory)) ? rawCategory : (rawCategory || null));
   const owner = String(user.display_name || "").trim() || null;
   if (!["SSD", "Module"].includes(part)) return redirect("/daily-reports");
 

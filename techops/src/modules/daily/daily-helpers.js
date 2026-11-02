@@ -199,20 +199,33 @@ export function renderFieldInput(field, L, value = "", optionValueById = {}, lan
 // (선택지가 관리자 설정에 없는 독립 필드는 data-depends-on 자체가 없어 영향 없음).
 export const CASCADING_SELECT_SCRIPT = `<script>
 (function(){
-  document.querySelectorAll('select[data-depends-on]').forEach(function(sel){
-    var parent = document.querySelector('[name="' + sel.getAttribute('data-depends-on') + '"]');
-    if (!parent) return;
-    function sync(){
-      var pv = parent.value;
-      Array.prototype.forEach.call(sel.querySelectorAll('option[data-parent]'), function(o){
-        o.hidden = (pv === '' || o.getAttribute('data-parent') !== pv);
-      });
-      if (sel.selectedOptions[0] && sel.selectedOptions[0].hidden) sel.value = '';
-      sel.dispatchEvent(new Event('change'));
-    }
-    parent.addEventListener('change', sync);
-    sync();
-  });
+  function initCascadingSelects(){
+    document.querySelectorAll('select[data-depends-on]').forEach(function(sel){
+      var parent = document.querySelector('[name="' + sel.getAttribute('data-depends-on') + '"]');
+      if (!parent) return;
+      function sync(){
+        var pv = parent.value;
+        Array.prototype.forEach.call(sel.querySelectorAll('option[data-parent]'), function(o){
+          var hide = (pv === '' || o.getAttribute('data-parent') !== pv);
+          o.hidden = hide;
+          o.style.display = hide ? 'none' : '';
+        });
+        if (sel.selectedOptions[0] && sel.selectedOptions[0].hidden) sel.value = '';
+        sel.dispatchEvent(new Event('change'));
+      }
+      if (!parent._hasCascadeSync) {
+        parent.addEventListener('change', sync);
+        parent._hasCascadeSync = true;
+      }
+      sync();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCascadingSelects);
+  } else {
+    initCascadingSelects();
+  }
+  window.initCascadingSelects = initCascadingSelects;
 })();
 </script>`;
 
