@@ -233,7 +233,7 @@ export async function pageDailyItemDetail(request, env, user, id) {
       .join("");
     return `
     <div class="daily-history-entry">
-      <div class="daily-history-meta">${escapeHtml(u.report_date)} · ${escapeHtml(u.display_name || L.unknown)}</div>
+      <div class="daily-history-meta">${escapeHtml(u.report_date)} ${u.created_at ? `<span class="muted" style="font-size:12px;">(${u.created_at.slice(11, 16)})</span>` : ""} · ${escapeHtml(u.display_name || L.unknown)}</div>
       <div class="daily-history-lines">${lines}</div>
       ${user.role === "admin" ? `<form method="post" action="/daily-items/${item.id}/updates/${u.id}/delete" data-confirm="${escapeHtml(L.deleteDailyUpdateConfirm)}" onsubmit="return confirm(this.dataset.confirm);">
         <button type="submit" class="danger small">${escapeHtml(L.deleteDailyUpdateBtn)}</button>
@@ -272,7 +272,8 @@ export async function pageDailyItemDetail(request, env, user, id) {
       <form method="post" action="/daily-items/${item.id}/updates" class="daily-form">
         <div class="field-grid">
           <div><label>${escapeHtml(L.filterDate)}</label>
-          <input type="date" name="report_date" value="${today}" required></div>
+          <input type="date" name="report_date" value="${today}" ${user.role === "admin" ? "" : "readonly"} required>
+          ${user.role === "admin" ? "" : `<p class="muted" style="font-size:12px;margin:3px 0 0;">🕒 ${escapeHtml(lang === "vi" ? "Ghi nhận tự động theo thời gian thực" : "실제 시간에 맞춰 자동 기록")}</p>`}</div>
           ${fieldInputs}
         </div>
         <div class="daily-form-actions"><button type="submit">${escapeHtml(L.submit)}</button></div>
@@ -304,7 +305,7 @@ async function saveDailyUpdate(env, user, form, fields, L, id, newItem = null) {
     catch { return plainText("LOTID: maximum 50 lines / 120 characters per ID", 400); }
   }
   const requestedDate = String(form.get("report_date") || "").trim();
-  const reportDate = requestedDate || businessDateString();
+  const reportDate = (user.role === "admin" && requestedDate) ? requestedDate : businessDateString();
   if (!isValidIsoDate(reportDate)) return plainText(L.invalidReportDate, 400);
   const classificationFields = DAILY_CLASSIFICATION_FIELDS.map((label) => fields.find((candidate) => candidate.label === label));
   const submittedClassification = classificationFields.map((field) => {

@@ -142,13 +142,14 @@ export async function attachFieldValues(env, lang, updates) {
 // data-depends-on 으로 표시해둔다. 실제 필터링은 pageDailyItemDetail 에 심어둔 공용 스크립트가 처리.
 export function renderFieldInput(field, L, value = "", optionValueById = {}, lang = DEFAULT_LANG, translationMap = new Map(), hasClassification = false) {
   const name = `field_${field.id}`;
+  const reqAttr = field.is_required ? " required" : "";
   if (field.label === "LOTID") return lotInput(field, value, lang, escapeHtml);
   if (field.input_type === "textarea") {
     if (field.label === "파트넘버") {
-      return `<textarea name="${name}" data-product-info aria-describedby="product-match-${field.id}" placeholder="Part number를 한 줄에 하나씩 입력">${escapeHtml(value)}</textarea>
+      return `<textarea name="${name}"${reqAttr} data-product-info aria-describedby="product-match-${field.id}" placeholder="Part number를 한 줄에 하나씩 입력">${escapeHtml(value)}</textarea>
         <div id="product-match-${field.id}" class="muted" data-product-match aria-live="polite"></div>`;
     }
-    return `<textarea name="${name}">${escapeHtml(value)}</textarea>`;
+    return `<textarea name="${name}"${reqAttr}>${escapeHtml(value)}</textarea>`;
   }
   if (field.input_type === "select") {
     const classificationLevel = hasClassification ? DAILY_CLASSIFICATION_FIELDS.indexOf(field.label) : -1;
@@ -157,7 +158,7 @@ export function renderFieldInput(field, L, value = "", optionValueById = {}, lan
     const dependsAttr = classificationLevel < 0 && field.depends_on_field_id ? ` data-depends-on="field_${field.depends_on_field_id}"` : "";
     const classificationAttr = classificationLevel >= 0
       ? ` data-classification-level="${classificationLevel}"${classificationLevel < 4 ? " required" : ""}`
-      : "";
+      : reqAttr;
     const choices = classificationLevel >= 0 ? [...new Map(field.options.map((option) => [option.value, option])).values()] : field.options;
     const opts = choices.map((o) => {
       const parentAttr = classificationLevel < 0 && o.parent_option_id ? ` data-parent="${escapeHtml(optionValueById[o.parent_option_id] || "")}"` : "";
@@ -173,7 +174,7 @@ export function renderFieldInput(field, L, value = "", optionValueById = {}, lan
     }).join("");
     return `<select name="${name}"${dependsAttr}${classificationAttr}><option value=""></option>${opts}</select>`;
   }
-  return `<input name="${name}" value="${escapeHtml(value)}">`;
+  return `<input name="${name}"${reqAttr} value="${escapeHtml(value)}">`;
 }
 
 // 부모 <select> 값이 바뀔 때마다 data-depends-on 으로 그 부모를 지목한 자식 <select> 의

@@ -270,6 +270,8 @@ export async function pageDailyFields(request, env, user) {
       <td>${escapeHtml(L["inputType" + f.input_type[0].toUpperCase() + f.input_type.slice(1)])}</td>
       <td>${f.input_type === "select" ? `<a href="/daily-fields/${f.id}" style="font-weight:600;">${f.options.length} ${escapeHtml(L.colOptions)} ⚙️</a>` : "-"}</td>
       <td>${f.depends_on_field_id && fieldById[f.depends_on_field_id] ? escapeHtml(resolveFieldLabel(fieldById[f.depends_on_field_id], lang, fieldTranslations)) : "-"}</td>
+      <td style="text-align:center;">${f.is_required ? `<span style="color:var(--danger);font-weight:bold;">✓</span>` : "-"}</td>
+      <td style="text-align:center;">${f.show_in_card !== 0 ? `<span style="color:var(--success);font-weight:bold;">✓</span>` : "-"}</td>
     </tr>`).join("");
 
   // 새로 만드는 필드는 항상 sort_order가 가장 크게 배정되므로, 기존 select 필드는
@@ -334,6 +336,16 @@ export async function pageDailyFields(request, env, user) {
           sync();
         })();
         </script>
+        <div style="display:flex;gap:20px;align-items:center;margin:12px 0;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" name="is_required" style="width:auto;margin:0;">
+            <span>${escapeHtml(lang === "vi" ? "Bắt buộc nhập" : lang === "en" ? "Required" : "필수 입력")}</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" name="show_in_card" checked style="width:auto;margin:0;">
+            <span>${escapeHtml(lang === "vi" ? "Hiển thị trên Card báo cáo" : lang === "en" ? "Show in Report Card" : "보고서 카드에 표시")}</span>
+          </label>
+        </div>
         <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.submit)}</button></div>
       </form>
     </div>
@@ -341,7 +353,7 @@ export async function pageDailyFields(request, env, user) {
       <h2 style="margin-top:0;">${escapeHtml(L.dailyItemsHeading)}</h2>
       <p><a href="/daily-fields/import">CSV Import</a> · <a href="/daily-fields/export">CSV Export</a></p>
       <table>
-        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th></tr></thead>
+        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th>${escapeHtml(lang === "vi" ? "Hiện Card" : "카드")}</th></tr></thead>
         <tbody>${rows || `<tr><td colspan="7" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
       </table>
     </div>` }));
@@ -379,10 +391,12 @@ export async function handleDailyFieldCreate(request, env, user) {
   }
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || RETIRED_DAILY_FIELDS.has(name) || label === "LOTID" || name === "LOTID")) return plainText(lotWords[getLang(request)].retired, 400);
 
+  const isRequired = form.get("is_required") === "on" || form.get("is_required") === "1" ? 1 : 0;
+  const showInCard = form.has("show_in_card") ? (form.get("show_in_card") === "on" || form.get("show_in_card") === "1" ? 1 : 0) : 1;
   const max = await env.DB.prepare(`SELECT COALESCE(MAX(sort_order), 0) AS m FROM tech_daily_field`).first();
   await env.DB.prepare(
-    `INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order, depends_on_field_id) VALUES (?, ?, ?, ?, ?, ?)`
-  ).bind(label, labelEn, labelVi, inputType, (max.m || 0) + 10, dependsOnFieldId).run();
+    `INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order, depends_on_field_id, is_required, show_in_card) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(label, labelEn, labelVi, inputType, (max.m || 0) + 10, dependsOnFieldId, isRequired, showInCard).run();
 
   return redirect("/daily-fields");
 }
@@ -532,6 +546,16 @@ export async function pageDailyFieldDetail(request, env, user, id) {
           sync();
         })();
         </script>
+        <div style="display:flex;gap:20px;align-items:center;margin:12px 0;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" name="is_required" ${field.is_required ? "checked" : ""} style="width:auto;margin:0;">
+            <span>${escapeHtml(lang === "vi" ? "Bắt buộc nhập" : lang === "en" ? "Required" : "필수 입력")}</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" name="show_in_card" ${field.show_in_card !== 0 ? "checked" : ""} style="width:auto;margin:0;">
+            <span>${escapeHtml(lang === "vi" ? "Hiển thị trên Card báo cáo" : lang === "en" ? "Show in Report Card" : "보고서 카드에 표시")}</span>
+          </label>
+        </div>
         <div style="margin-top:12px;"><button type="submit">${escapeHtml(L.save)}</button></div>
       </form>
       <form method="post" action="/daily-fields/${field.id}/delete" style="margin-top:12px;" onsubmit="return confirm('${escapeHtml(L.deleteFieldConfirm)}');">
@@ -608,8 +632,10 @@ export async function handleDailyFieldUpdate(request, env, user, id) {
   }
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || label === "LOTID")) return plainText(lotWords[lang].retired, 400);
 
-  await env.DB.prepare(`UPDATE tech_daily_field SET label = ?, label_en = ?, label_vi = ?, input_type = ?, depends_on_field_id = ? WHERE id = ?`)
-    .bind(label, labelEn, labelVi, inputType, dependsOnFieldId, id).run();
+  const isRequired = form.get("is_required") === "on" || form.get("is_required") === "1" ? 1 : 0;
+  const showInCard = form.has("show_in_card") ? (form.get("show_in_card") === "on" || form.get("show_in_card") === "1" ? 1 : 0) : 1;
+  await env.DB.prepare(`UPDATE tech_daily_field SET label = ?, label_en = ?, label_vi = ?, input_type = ?, depends_on_field_id = ?, is_required = ?, show_in_card = ? WHERE id = ?`)
+    .bind(label, labelEn, labelVi, inputType, dependsOnFieldId, isRequired, showInCard, id).run();
 
   // 이 필드가 더 이상 select 타입이 아니면, 이 필드에 의존하던 다른 필드들은 상위 항목을 잃는다.
   if (inputType !== "select") {

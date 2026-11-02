@@ -45,10 +45,10 @@ export async function pageDailyReports(request, env, user) {
   const loadLiveUpdatesForDate = async (date) => {
     if (!date) return [];
     const sql = selectedPart === "all"
-      ? `SELECT u.id, u.report_date, i.id AS item_id, i.part, i.category, i.title, i.owner
+      ? `SELECT u.id, u.report_date, u.created_at, i.id AS item_id, i.part, i.category, i.title, i.owner
            FROM tech_daily_update u JOIN tech_daily_item i ON i.id = u.item_id
           WHERE u.report_date = ? ORDER BY i.part, i.category, i.title`
-      : `SELECT u.id, u.report_date, i.id AS item_id, i.part, i.category, i.title, i.owner
+      : `SELECT u.id, u.report_date, u.created_at, i.id AS item_id, i.part, i.category, i.title, i.owner
            FROM tech_daily_update u JOIN tech_daily_item i ON i.id = u.item_id
           WHERE u.report_date = ? AND i.part = ? ORDER BY i.category, i.title`;
     const params = selectedPart === "all" ? [date] : [date, selectedPart];
@@ -113,6 +113,22 @@ export async function pageDailyReports(request, env, user) {
   const unreportedItems = selectedDate
     ? scopedOpenItems.filter((item) => !reportedIds.has(Number(item.id)))
     : [];
+
+  let rolloverUpdates = [];
+  if (selectedDate === todayStr && unreportedItems.length) {
+    const unrepIds = unreportedItems.map((it) => it.id);
+    const placeholders = unrepIds.map(() => "?").join(",");
+    const rolloverSql = `SELECT u.id, u.report_date, u.created_at, i.id AS item_id, i.part, i.category, i.title, i.owner
+          FROM tech_daily_update u JOIN tech_daily_item i ON i.id = u.item_id
+         WHERE u.id IN (
+           SELECT MAX(u2.id) FROM tech_daily_update u2 WHERE u2.item_id IN (${placeholders}) GROUP BY u2.item_id
+         ) ORDER BY i.part, i.category, i.title`;
+    const rolloverRes = await env.DB.prepare(rolloverSql).bind(...unrepIds).all();
+    if (rolloverRes.results.length) {
+      const attached = await attachFieldValues(env, lang, rolloverRes.results);
+      rolloverUpdates = attached.map((u) => ({ ...u, isUnreportedToday: true }));
+    }
+  }
   const detailCell = (text) => text
     ? `<details><summary>${escapeHtml(L.viewDetail)}</summary><pre style="white-space:pre-wrap;font-family:inherit;margin:6px 0 0;">${escapeHtml(text)}</pre></details>`
     : "-";
@@ -121,7 +137,9 @@ export async function pageDailyReports(request, env, user) {
   // 한눈에 보는 요약표 + 상세 카드/표를 이어붙인다 — 작성자마다 필드 구성이 달라도
   // 항상 같은 모양으로 보이게 해서 임원 보고용으로 그대로 쓸 수 있게 하는 게 목적.
   const renderPartSection = (part) => {
-    const live = liveUpdates.filter((u) => u.part === part);
+    const liveToday = liveUpdates.filter((u) => u.part === part);
+    const rollover = (selectedDate === todayStr) ? rolloverUpdates.filter((u) => u.part === part) : [];
+    const live = [...liveToday, ...rollover];
     const archive = reports.results.filter((r) => r.part === part);
     if (!live.length && !archive.length) return "";
 
@@ -137,8 +155,11 @@ export async function pageDailyReports(request, env, user) {
       return `<article class="daily-overview${statusClass ? ` is-${statusClass}` : ""} no-print">
         <div class="daily-overview-head"><div class="daily-overview-title"><div class="muted">${escapeHtml(resolveOptionValue(u.category || "-", lang, reportTextTranslations))}${fields["제품"] ? ` · ${escapeHtml(fields["제품"])}` : ""}</div>
         <h4><a href="/daily-items/${u.item_id}">${escapeHtml(translatedText(u.title, reportTextTranslations))}</a></h4></div>
-        <div class="daily-overview-meta"><span class="status-pill ${statusClass}">${escapeHtml(status)}</span>
-        <span class="muted">${escapeHtml(L.colAssignee)} · ${escapeHtml(u.owner || "-")}</span></div></div>
+        <div class="daily-overview-meta">
+          ${u.isUnreportedToday ? `<span class="status-pill" style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;">⚠️ ${escapeHtml(lang === "vi" ? "Chưa cập nhật hôm nay" : "오늘 미보고")}</span>` : `<span class="status-pill ${statusClass}">${escapeHtml(status)}</span>`}
+          <span class="muted">${escapeHtml(L.colAssignee)} · ${escapeHtml(u.owner || "-")}</span>
+          <span class="muted" style="font-size:12px;">🕒 ${escapeHtml(u.report_date)}${u.created_at ? ` (${u.created_at.slice(11, 16)})` : ""}</span>
+        </div></div>
         ${work ? `<p class="daily-content">${escapeHtml(work)}</p>` : ""}
         ${issue ? `<p class="daily-content daily-issue"><strong>${escapeHtml(L.colIssueAction)}</strong> · ${escapeHtml(issue)}</p>` : ""}
         ${remark ? `<p class="daily-content muted"><strong>${escapeHtml(L.colRemark)}</strong> · ${escapeHtml(remark)}</p>` : ""}

@@ -143,6 +143,8 @@ CREATE TABLE IF NOT EXISTS tech_daily_field (
   input_type TEXT NOT NULL DEFAULT 'text' CHECK (input_type IN ('text','textarea','select')),
   sort_order INTEGER NOT NULL DEFAULT 0,
   depends_on_field_id INTEGER REFERENCES tech_daily_field(id) ON DELETE SET NULL,
+  is_required INTEGER NOT NULL DEFAULT 0,
+  show_in_card INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

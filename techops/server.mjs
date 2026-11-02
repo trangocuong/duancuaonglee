@@ -28,9 +28,11 @@ db.exec("PRAGMA busy_timeout = 5000;");
 try {
   db.exec("ALTER TABLE tech_daily_field_option ADD COLUMN value_en TEXT;");
   db.exec("ALTER TABLE tech_daily_field_option ADD COLUMN value_vi TEXT;");
-} catch (e) {
-  // Cột đã tồn tại, bỏ qua
-}
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE tech_daily_field ADD COLUMN is_required INTEGER NOT NULL DEFAULT 0;");
+  db.exec("ALTER TABLE tech_daily_field ADD COLUMN show_in_card INTEGER NOT NULL DEFAULT 1;");
+} catch (e) {}
 
 
 if (isNewDb) {
