@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import worker from "../worker.js";
 import { hashPassword } from "../src/utils/helpers.js";
 
-export async function testNewFeatures({ check, env, db, adminHeaders }) {
+export async function testNewFeatures({ check, env, db, adminHeaders, viewerHeaders }) {
   // 1. Test Đổi mật khẩu
   {
     const { salt, hash } = await hashPassword("OldPass123");
@@ -103,5 +103,14 @@ export async function testNewFeatures({ check, env, db, adminHeaders }) {
 
     const deletedRow = db.prepare("SELECT * FROM tech_master_row WHERE id = ?").get(row.id);
     check("master row deleted from DB", deletedRow === undefined);
+  }
+
+  // 4. Test regular member view & task creation modal
+  if (viewerHeaders) {
+    const resViewer = await worker.fetch(new Request("https://x/daily-reports", { headers: viewerHeaders }), env, {});
+    const htmlViewer = await resViewer.text();
+    check("non-admin does not see /daily-items in subtabs", !htmlViewer.includes('href="/daily-items" class='));
+    check("non-admin does not see /daily-fields in subtabs", !htmlViewer.includes('href="/daily-fields"'));
+    check("daily-reports includes #create-item-dialog modal", htmlViewer.includes('id="create-item-dialog"'));
   }
 }

@@ -656,11 +656,12 @@ fetch('/api/version', {cache:'no-store'}).then(function(r){if(!r.ok) throw new E
 // /daily-items 와 /daily-reports 는 사이드바에서는 "일일업무 보고" 하나로 묶여 있고,
 // 그 안에서 입력/조회를 오갈 수 있도록 각 페이지 상단에 작은 탭을 붙인다.
 export function dailyWorkSubtabs(L, active, user) {
+  const isAdmin = Boolean(user && user.role === "admin");
   return `<div class="subtabs">
     <a href="/daily-reports" class="${active === "report" ? "active" : ""}">${escapeHtml(L.tabDailyReport)}</a>
-    <a href="/daily-items" class="${active === "input" ? "active" : ""}">${escapeHtml(L.tabDailyInput)}</a>
+    ${isAdmin ? `<a href="/daily-items" class="${active === "input" ? "active" : ""}">${escapeHtml(L.tabDailyInput)}</a>` : ""}
     <a href="/lot-tracker" class="${active === "tracker" ? "active" : ""}">LOT Tracker</a>
-    ${user.role === "admin" ? `<a href="/daily-fields" class="${active === "settings" ? "active" : ""}">${escapeHtml(L.navDailyFields)}</a>` : ""}
+    ${isAdmin ? `<a href="/daily-fields" class="${active === "settings" ? "active" : ""}">${escapeHtml(L.navDailyFields)}</a>` : ""}
   </div>`;
 }
 

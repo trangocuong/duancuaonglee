@@ -1554,7 +1554,7 @@ async function main() {
   await testLotSteps({ check, env, viewerHeaders });
   await testUserManagement({ db, env, check, adminHeaders: adminHeaders2 });
   await testTranslationEfficiency({ check, makeEnv: (database) => ({ DB: new D1Shim(database) }) });
-  await testNewFeatures({ check, env, db, adminHeaders: adminHeaders2 });
+  await testNewFeatures({ check, env, db, adminHeaders: adminHeaders2, viewerHeaders });
   console.log(`\n${pass} passed, ${fail} failed`);
   if (fail > 0) process.exit(1);
 }

@@ -91,6 +91,20 @@ export async function attachFieldValues(env, lang, updates) {
   for (const v of values.results) {
     (valuesByUpdate[v.update_id] ||= {})[v.field_id] = v;
   }
+  const itemIds = [...new Set(updates.map((u) => u.item_id).filter(Boolean))];
+  const firstValuesByItem = {};
+  if (itemIds.length) {
+    try {
+      const firstRows = await env.DB.prepare(
+        `SELECT v.*, u.item_id FROM tech_daily_update_value v
+           JOIN tech_daily_update u ON u.id = v.update_id
+          WHERE u.id IN (SELECT MIN(u2.id) FROM tech_daily_update u2 WHERE u2.item_id IN (${itemIds.map(() => "?").join(",")}) GROUP BY u2.item_id)`
+      ).bind(...itemIds).all();
+      for (const row of firstRows.results) {
+        (firstValuesByItem[row.item_id] ||= {})[row.field_id] = row;
+      }
+    } catch (_) {}
+  }
   const fieldLabelTranslations = await buildDisplayTranslationMap(
     env,
     fields.filter((field) => !((lang === "en" && field.label_en) || (lang === "vi" && field.label_vi))).map((field) => field.label),
@@ -118,7 +132,9 @@ export async function attachFieldValues(env, lang, updates) {
     return resolveValueText(row, lang, valueTranslations);
   };
   return updates.map((u) => {
-    const raw = valuesByUpdate[u.id] || {};
+    const initial = firstValuesByItem[u.item_id] || {};
+    const updateRaw = valuesByUpdate[u.id] || {};
+    const raw = { ...initial, ...updateRaw };
     return {
       ...u,
       rawStatusValue: statusField && raw[statusField.id] ? raw[statusField.id].value : null,
@@ -126,6 +142,7 @@ export async function attachFieldValues(env, lang, updates) {
       fieldValues: Object.entries(raw)
         .map(([fieldId, row]) => ({
           fieldId,
+          field: fieldById[fieldId],
           key: fieldById[fieldId] ? fieldById[fieldId].label : "-",
           label: fieldById[fieldId] ? resolveFieldLabel(fieldById[fieldId], lang, fieldLabelTranslations) : "-",
           rawValue: row.value,

@@ -160,20 +160,16 @@ export async function handleDailyItemCreate(request, env, user) {
   const rawCategory = combinedEntry ? classificationValue(DAILY_CLASSIFICATION_FIELDS[1]) : String(form.get("category") || "").trim();
   const category = combinedEntry ? (rawCategory || null) : (WORK_CATEGORIES.includes(rawCategory) ? rawCategory : null);
   const owner = String(user.display_name || "").trim() || null;
-  if (!["SSD", "Module"].includes(part)) return redirect("/daily-items");
+  if (!["SSD", "Module"].includes(part)) return redirect("/daily-reports");
 
   if (combinedEntry) {
     // 제목은 자유 입력이 아니라 saveDailyUpdate 내부에서 분류·파트넘버로 조합한다.
     return saveDailyUpdate(env, user, form, fields, t(getLang(request)), null, { part, category, owner });
   }
   const title = String(form.get("title") || "").trim();
-  if (!title) return redirect("/daily-items");
-  await warmTranslationCache(env, [title]);
-  await env.DB.prepare(
-    `INSERT INTO tech_daily_item (part, category, title, owner, created_by) VALUES (?, ?, ?, ?, ?)`
-  ).bind(part, category, title, owner, user.id).run();
+  if (!title) return redirect("/daily-reports");
 
-  return redirect("/daily-items");
+  return saveDailyUpdate(env, user, form, fields, t(getLang(request)), null, { part, category, owner, title });
 }
 
 
@@ -314,11 +310,8 @@ async function saveDailyUpdate(env, user, form, fields, L, id, newItem = null) {
   if (classificationFields.every(Boolean) && !isValidClassification(submittedClassification)) {
     return plainText("일일보고 분류 조합이 설정 기준과 일치하지 않습니다.", 400);
   }
-  if (newItem) {
-    // 새 항목 제목은 더 이상 자유 입력을 받지 않고 분류·추가입력·파트넘버 매칭 결과로
-    // 서버가 조합한다(2026-09-16, 담당자마다 제목을 다르게 적어 보고가 흩어지는 문제 해결).
-    // 원본 분류값 "Module"은 이 제목에서만 원래 엑셀 표기인 "MDL"로 되돌린다 — 사이트
-    // 전역에서 쓰는 "Module" 표시는 그대로 두고 제목 조합에서만 축약한다.
+  const combinedEntry = hasDailyClassification(fields);
+  if (newItem && combinedEntry) {
     const fieldValue = (label) => {
       const field = fields.find((candidate) => candidate.label === label);
       return field ? String(form.get(`field_${field.id}`) || "").trim() : "";
@@ -384,6 +377,12 @@ async function saveDailyUpdate(env, user, form, fields, L, id, newItem = null) {
     ).bind(r.fieldId, r.ko, r.en, r.vi)));
     const results = await env.DB.batch(statements);
     if (newItem) id = results[0].meta.last_row_id;
+  } else if (newItem) {
+    await warmTranslationCache(env, [newItem.title]);
+    const res = await env.DB.prepare(
+      `INSERT INTO tech_daily_item (part, category, title, owner, created_by) VALUES (?, ?, ?, ?, ?)`
+    ).bind(newItem.part, newItem.category, newItem.title, newItem.owner, user.id).run();
+    id = res.meta.last_row_id;
   }
 
   return redirect(`/daily-items/${id}`);
