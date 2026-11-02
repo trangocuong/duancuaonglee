@@ -159,11 +159,11 @@ export function parseCookies(request) {
 }
 
 export function sessionCookie(token, maxAgeSeconds) {
-  return `session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
+  return `session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}`; // Bỏ Secure để chạy được trên mạng LAN HTTP
 }
 
 export function clearedSessionCookie() {
-  return `session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+  return `session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
 }
 
 export function redirect(location, extraHeaders = {}) {

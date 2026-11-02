@@ -99,7 +99,7 @@ function parseCookies(request) {
 }
 
 export function langCookie(lang) {
-  return `lang=${encodeURIComponent(lang)}; Path=/; Secure; SameSite=Lax; Max-Age=31536000`;
+  return `lang=${encodeURIComponent(lang)}; Path=/; SameSite=Lax; Max-Age=31536000`; // Bỏ Secure để chạy được trên mạng LAN HTTP
 }
 
 export function getLang(request, user) {
