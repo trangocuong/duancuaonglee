@@ -1,27 +1,25 @@
 @echo off
-chcp 65001 > nul
-title TechOps LAN Server (Offline 100%%)
+title TechOps LAN Server
+cd /d "%~dp0"
 
 echo ==================================================================
-echo   Đang khởi động Máy chủ TechOps mạng LAN nội bộ...
+echo   Dang khoi dong May chu TechOps mang LAN noi bo...
 echo ==================================================================
 echo.
 
 where node >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [LỖI] Không tìm thấy Node.js trên máy tính này!
-    echo Vui lòng cài đặt Node.js phiên bản 22 trở lên để chạy máy chủ.
+    echo [LOI] Khong tim thay Node.js tren may tinh nay!
+    echo Vui long cai dat Node.js phien ban 22 tro len de chay may chu.
     echo.
     pause
     exit /b 1
 )
 
-cd /d "%~dp0"
 node server.mjs
 
 if %errorlevel% neq 0 (
     echo.
-    echo [LỖI] Máy chủ đã dừng lại với mã lỗi %errorlevel%!
+    echo [LOI] May chu da dung lai voi ma loi %errorlevel%!
     pause
 )
-

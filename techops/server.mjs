@@ -16,7 +16,8 @@ import { DatabaseSync } from "node:sqlite";
 import worker from "./worker.js";
 import { getLocalLanIps } from "./src/utils/lan-helpers.js";
 
-const dbPath = process.env.DB_PATH || path.resolve("./techops_local.db");
+const appDir = import.meta.dirname || path.resolve(".");
+const dbPath = process.env.DB_PATH || path.resolve(appDir, "./techops_local.db");
 const isNewDb = !fs.existsSync(dbPath);
 const db = new DatabaseSync(dbPath);
 
@@ -27,11 +28,15 @@ db.exec("PRAGMA busy_timeout = 5000;");
 
 if (isNewDb) {
   console.log(`[LAN Server] Đang khởi tạo cơ sở dữ liệu mới tại ${dbPath}...`);
-  if (fs.existsSync("./database/schema.sql")) {
-    db.exec(fs.readFileSync("./database/schema.sql", "utf8"));
+  const schemaPath = path.resolve(appDir, "./database/schema.sql");
+  const evalSchemaPath = path.resolve(appDir, "./evaluation/schema.sql");
+  const demoSeedPath = path.resolve(appDir, "./database/demo-seed.sql");
+
+  if (fs.existsSync(schemaPath)) {
+    db.exec(fs.readFileSync(schemaPath, "utf8"));
   }
-  if (fs.existsSync("./evaluation/schema.sql")) {
-    db.exec(fs.readFileSync("./evaluation/schema.sql", "utf8"));
+  if (fs.existsSync(evalSchemaPath)) {
+    db.exec(fs.readFileSync(evalSchemaPath, "utf8"));
   }
   // Tạo tài khoản Quản trị viên mặc định nếu cơ sở dữ liệu mới tinh
   db.exec(`
@@ -40,8 +45,8 @@ if (isNewDb) {
       ('admin@hanyangdgtvina.com', 'FSizwwX0SNpQtxbuQnS/7dUHaxBX7BrIJAjB70rWKGA=', 'wGbjxFEL5wBhVxq8t+ZyyA==', 'Quản trị viên Hệ thống', 'admin', datetime('now'))
     ON CONFLICT(username) DO NOTHING;
   `);
-  if (fs.existsSync("./database/demo-seed.sql") && process.env.LOAD_DEMO_SEED !== "false") {
-    db.exec(fs.readFileSync("./database/demo-seed.sql", "utf8"));
+  if (fs.existsSync(demoSeedPath) && process.env.LOAD_DEMO_SEED !== "false") {
+    db.exec(fs.readFileSync(demoSeedPath, "utf8"));
   }
   console.log("[LAN Server] Đã nạp thành công schema ban đầu.");
 } else {
