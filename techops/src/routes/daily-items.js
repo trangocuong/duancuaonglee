@@ -71,11 +71,11 @@ export async function pageDailyItems(request, env, user) {
     ...fields.filter((field) => !((lang === "en" && field.label_en) || (lang === "vi" && field.label_vi))).map((field) => field.label),
     ...fields.flatMap((field) => field.options.map((option) => option.value)),
   ], lang) : new Map();
-  const fixedItemFields = fields.filter(f => (f.field_scope === "item" || f.field_scope === "both") && f.label !== "업무구분" && f.label !== "Phân loại công việc");
+  const fixedItemFields = fields.filter(f => f.field_scope === "item" && f.label !== "업무구분" && f.label !== "Phân loại công việc");
   const fixedItemInputs = fixedItemFields.map((field) => `
     <div><label>${escapeHtml(resolveFieldLabel(field, lang, fieldTranslations))}${field.is_required ? ' <span style="color:var(--danger)">*</span>' : ''}</label>
     ${renderFieldInput(field, L, "", optionValueById, lang, fieldTranslations, false)}</div>`).join("\n");
-  const reportInputs = combinedEntry ? fields.filter(f => f.field_scope !== "update").map((field) => `
+  const reportInputs = combinedEntry ? fields.map((field) => `
     <div><label>${escapeHtml(resolveFieldLabel(field, lang, fieldTranslations))}</label>
     ${renderFieldInput(field, L, "", optionValueById, lang, fieldTranslations, combinedEntry)}</div>`).join("\n") : "";
 

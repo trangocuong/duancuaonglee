@@ -32,7 +32,7 @@ try {
 try {
   db.exec("ALTER TABLE tech_daily_field ADD COLUMN is_required INTEGER NOT NULL DEFAULT 0;");
   db.exec("ALTER TABLE tech_daily_field ADD COLUMN show_in_card INTEGER NOT NULL DEFAULT 1;");
-  db.exec("ALTER TABLE tech_daily_field ADD COLUMN field_scope TEXT NOT NULL DEFAULT 'both';");
+  db.exec("ALTER TABLE tech_daily_field ADD COLUMN field_scope TEXT NOT NULL DEFAULT 'update';");
   db.exec("ALTER TABLE tech_daily_field ADD COLUMN card_position TEXT NOT NULL DEFAULT 'body';");
 } catch (e) {}
 

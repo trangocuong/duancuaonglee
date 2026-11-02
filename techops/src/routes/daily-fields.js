@@ -252,8 +252,8 @@ export async function pageDailyFields(request, env, user) {
     lang
   );
 
-  const itemFields = fields.filter((f) => f.field_scope === "item" || f.field_scope === "both");
-  const updateFields = fields.filter((f) => f.field_scope === "update" || f.field_scope === "both");
+  const itemFields = fields.filter((f) => f.field_scope === "item");
+  const updateFields = fields.filter((f) => f.field_scope === "update");
 
   const renderFieldRow = (f, i, list, scopeName) => `
     <tr>
@@ -275,8 +275,7 @@ export async function pageDailyFields(request, env, user) {
       <td>${escapeHtml(L["inputType" + f.input_type[0].toUpperCase() + f.input_type.slice(1)])}</td>
       <td>${f.input_type === "select" ? `<a href="/daily-fields/${f.id}" style="font-weight:600;">${f.options.length} ${escapeHtml(L.colOptions)} ⚙️</a>` : "-"}</td>
       <td>${f.depends_on_field_id && fieldById[f.depends_on_field_id] ? escapeHtml(resolveFieldLabel(fieldById[f.depends_on_field_id], lang, fieldTranslations)) : "-"}</td>
-      <td><span class="status-pill" style="font-size:11px;">${escapeHtml(f.field_scope === "both" ? (lang === "vi" ? "Cả hai" : "전체") : f.field_scope === "item" ? (lang === "vi" ? "Tạo mục" : "항목") : (lang === "vi" ? "Tiến độ" : "보고"))}</span></td>
-      <td><span class="status-pill" style="font-size:11px; background:${f.card_position === "badge" ? "var(--accent-soft)" : f.card_position === "highlight" ? "var(--warning)" : "transparent"};">${escapeHtml(f.card_position === "badge" ? "Badge" : f.card_position === "highlight" ? "Highlight" : f.card_position === "hidden" ? "Hidden" : "Body")}</span></td>
+      <td><span class="status-pill" style="font-size:11px;">${escapeHtml(f.card_position === "badge" ? "Badge" : f.card_position === "highlight" ? "Highlight" : f.card_position === "hidden" ? "Hidden" : "Body")}</span></td>
       <td style="text-align:center;">${f.is_required ? `<span style="color:var(--danger);font-weight:bold;">✓</span>` : "-"}</td>
       <td><a href="/daily-fields/${f.id}" class="secondary small">✏️ ${escapeHtml(lang === "vi" ? "Cài đặt" : "설정")}</a></td>
     </tr>`;
@@ -293,12 +292,12 @@ export async function pageDailyFields(request, env, user) {
   const designerFieldItems = fields.map((f) => {
     const label = resolveFieldLabel(f, lang, fieldTranslations);
     const pos = f.card_position || "body";
-    const scopeLabel = f.field_scope === "item" ? (lang === "vi" ? "Tạo mục" : "항목") : f.field_scope === "update" ? (lang === "vi" ? "Tiến độ" : "보고") : (lang === "vi" ? "Cả hai" : "전체");
+    const scopeLabel = f.field_scope === "item" ? (lang === "vi" ? "Tạo mục" : "항목") : (lang === "vi" ? "Tiến độ" : "보고");
     return `
     <div class="designer-card-field" id="field-card-${f.id}" draggable="true" data-field-id="${f.id}" data-label="${escapeHtml(label)}" style="padding:10px 12px; background:var(--card-bg, #1e293b); border:1px solid var(--border); border-radius:8px; cursor:grab;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <span style="font-weight:600; font-size:13px;">${escapeHtml(label)}</span>
-        <span class="status-pill" style="font-size:10px; padding:1px 6px;">${escapeHtml(scopeLabel)}</span>
+        <span class="status-pill" style="font-size:10px; padding:1px 6px; background:${f.field_scope === "item" ? "rgba(59,130,246,0.15)" : "rgba(16,185,129,0.15)"}; color:${f.field_scope === "item" ? "#60a5fa" : "#34d399"};">${escapeHtml(scopeLabel)}</span>
       </div>
       <input type="hidden" name="pos_${f.id}" id="input_pos_${f.id}" value="${pos}">
       <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px;">
@@ -322,14 +321,14 @@ export async function pageDailyFields(request, env, user) {
     <div class="card" id="section-item" style="border-top: 4px solid var(--accent, #3b82f6);">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
         <div>
-          <h2 style="margin:0; font-size:18px;">📋 ${escapeHtml(lang === "vi" ? "1. Cài đặt thông tin khi tạo mục mới (Form Tạo công việc)" : "새 항목 등록 설정")}</h2>
-          <p class="muted" style="margin:4px 0 0; font-size:13px;">${escapeHtml(lang === "vi" ? "Các trường cố định khi đăng ký một mục công việc mới (Ví dụ: Sản phẩm, Phân loại, Part No...). Thứ tự sắp xếp ở đây là thứ tự hiển thị trong form tạo mục." : "새 업무 등록 시 입력하는 고정 정보 항목입니다. 위/아래 버튼으로 생성 폼 순서를 조정합니다.")}</p>
+          <h2 style="margin:0; font-size:18px;">📋 ${escapeHtml(lang === "vi" ? "1. Cài đặt thông tin khi tạo mục mới (Form Đăng ký công việc)" : "새 항목 등록 설정")}</h2>
+          <p class="muted" style="margin:4px 0 0; font-size:13px;">${escapeHtml(lang === "vi" ? "Các trường cố định khi đăng ký một mục công việc mới (Ví dụ: Sản phẩm, Mã linh kiện...). Chỉ nhập 1 lần lúc tạo mục, không xuất hiện trong form báo cáo tiến độ mỗi ngày. Bấm ▲ / ▼ để sắp xếp thứ tự hiển thị trong popup tạo mục." : "새 업무 등록 시 입력하는 고정 정보 항목입니다. 위/아래 버튼으로 생성 폼 순서를 조정합니다.")}</p>
         </div>
         <span class="status-pill" style="font-weight:600;">${itemFields.length} ${escapeHtml(lang === "vi" ? "trường tạo mục" : "항목")}</span>
       </div>
       <table>
-        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Phạm vi" : "범위")}</th><th>${escapeHtml(lang === "vi" ? "Vị trí Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th></th></tr></thead>
-        <tbody>${itemRows || `<tr><td colspan="11" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
+        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Vị trí Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th></th></tr></thead>
+        <tbody>${itemRows || `<tr><td colspan="10" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
       </table>
     </div>
 
@@ -338,13 +337,13 @@ export async function pageDailyFields(request, env, user) {
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
         <div>
           <h2 style="margin:0; font-size:18px;">📝 ${escapeHtml(lang === "vi" ? "2. Cài đặt nội dung báo cáo tiến độ hàng ngày (Form Báo cáo)" : "일일 진척 보고 설정")}</h2>
-          <p class="muted" style="margin:4px 0 0; font-size:13px;">${escapeHtml(lang === "vi" ? "Các trường nhập liệu tiến độ mỗi ngày (Ví dụ: Trạng thái, Công đoạn, Nội dung, Số lượng, Suất, Sự cố/Biện pháp...). Thứ tự ở đây là thứ tự hiển thị trong form báo cáo." : "매일 작성하는 일일 업무 진척 보고 항목입니다. 위/아래 버튼으로 보고 폼 순서를 조정합니다.")}</p>
+          <p class="muted" style="margin:4px 0 0; font-size:13px;">${escapeHtml(lang === "vi" ? "Các trường nhập liệu tiến độ mỗi ngày (Ví dụ: Phân loại công việc hôm nay, Trạng thái, Công đoạn, Nội dung, Số lượng, Suất, Sự cố/Biện pháp...). Bấm ▲ / ▼ để sắp xếp thứ tự hiển thị trong form báo cáo tiến độ." : "매일 작성하는 일일 업무 진척 보고 항목입니다. 위/아래 버튼으로 보고 폼 순서를 조정합니다.")}</p>
         </div>
         <span class="status-pill" style="font-weight:600;">${updateFields.length} ${escapeHtml(lang === "vi" ? "trường tiến độ" : "항목")}</span>
       </div>
       <table>
-        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Phạm vi" : "범위")}</th><th>${escapeHtml(lang === "vi" ? "Vị trí Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th></th></tr></thead>
-        <tbody>${updateRows || `<tr><td colspan="11" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
+        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Vị trí Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th></th></tr></thead>
+        <tbody>${updateRows || `<tr><td colspan="10" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
       </table>
     </div>
 
@@ -476,11 +475,10 @@ export async function pageDailyFields(request, env, user) {
         </script>
         <div class="row" style="margin:12px 0;">
           <div>
-            <label style="font-weight:600;">${escapeHtml(lang === "vi" ? "Phạm vi hiển thị (Form)" : "적용 범위")}</label>
+            <label style="font-weight:600;">${escapeHtml(lang === "vi" ? "Phạm vi sử dụng" : "적용 범위")}</label>
             <select name="field_scope">
-              <option value="both">${escapeHtml(lang === "vi" ? "Cả hai (Tạo mục & Cập nhật tiến độ)" : "전체 (항목 등록 & 진척 보고)")}</option>
-              <option value="item">${escapeHtml(lang === "vi" ? "Cố định khi tạo mục mới (Sản phẩm, Part No...)" : "새 항목 등록 시 고정 정보")}</option>
-              <option value="update">${escapeHtml(lang === "vi" ? "Tiến độ hàng ngày (Trạng thái, Công đoạn, Số lượng...)" : "일일 진척 보고 시에만 입력")}</option>
+              <option value="item">${escapeHtml(lang === "vi" ? "📋 1. Thông tin cố định khi tạo mục mới (Sản phẩm, Part No...)" : "새 항목 등록 시 고정 정보")}</option>
+              <option value="update" selected>${escapeHtml(lang === "vi" ? "📝 2. Nội dung báo cáo tiến độ hàng ngày (Phân loại, Trạng thái, Số lượng...)" : "일일 진척 보고 시 입력")}</option>
             </select>
           </div>
           <div>
@@ -679,7 +677,7 @@ export async function handleDailyFieldCreate(request, env, user) {
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || RETIRED_DAILY_FIELDS.has(name) || label === "LOTID" || name === "LOTID")) return plainText(lotWords[getLang(request)].retired, 400);
 
   const isRequired = form.get("is_required") === "on" || form.get("is_required") === "1" ? 1 : 0;
-  const fieldScope = ["item", "update", "both"].includes(String(form.get("field_scope"))) ? String(form.get("field_scope")) : "both";
+  const fieldScope = form.get("field_scope") === "item" ? "item" : "update";
   const cardPosition = ["badge", "highlight", "body", "hidden"].includes(String(form.get("card_position"))) ? String(form.get("card_position")) : "body";
   const showInCard = cardPosition === "hidden" ? 0 : 1;
   const max = await env.DB.prepare(`SELECT COALESCE(MAX(sort_order), 0) AS m FROM tech_daily_field`).first();
@@ -839,9 +837,8 @@ export async function pageDailyFieldDetail(request, env, user, id) {
           <div>
             <label style="font-weight:600;">${escapeHtml(lang === "vi" ? "Phạm vi hiển thị (Form)" : "적용 범위")}</label>
             <select name="field_scope">
-              <option value="both" ${field.field_scope === "both" || !field.field_scope ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Cả hai (Tạo mục & Cập nhật tiến độ)" : "전체 (항목 등록 & 진척 보고)")}</option>
-              <option value="item" ${field.field_scope === "item" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Cố định khi tạo mục mới (Sản phẩm, Part No...)" : "새 항목 등록 시 고정 정보")}</option>
-              <option value="update" ${field.field_scope === "update" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Tiến độ hàng ngày (Trạng thái, Công đoạn, Số lượng...)" : "일일 진척 보고 시에만 입력")}</option>
+              <option value="item" ${field.field_scope === "item" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "📋 1. Thông tin cố định khi tạo mục mới (Sản phẩm, Part No...)" : "새 항목 등록 시 고정 정보")}</option>
+              <option value="update" ${field.field_scope !== "item" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "📝 2. Nội dung báo cáo tiến độ hàng ngày (Phân loại, Trạng thái, Số lượng...)" : "일일 진척 보고 시 입력")}</option>
             </select>
           </div>
           <div>
@@ -937,7 +934,7 @@ export async function handleDailyFieldUpdate(request, env, user, id) {
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || label === "LOTID")) return plainText(lotWords[lang].retired, 400);
 
   const isRequired = form.get("is_required") === "on" || form.get("is_required") === "1" ? 1 : 0;
-  const fieldScope = ["item", "update", "both"].includes(String(form.get("field_scope"))) ? String(form.get("field_scope")) : "both";
+  const fieldScope = form.get("field_scope") === "item" ? "item" : "update";
   const cardPosition = ["badge", "highlight", "body", "hidden"].includes(String(form.get("card_position"))) ? String(form.get("card_position")) : "body";
   const showInCard = cardPosition === "hidden" ? 0 : 1;
   await env.DB.prepare(`UPDATE tech_daily_field SET label = ?, label_en = ?, label_vi = ?, input_type = ?, depends_on_field_id = ?, is_required = ?, show_in_card = ?, field_scope = ?, card_position = ? WHERE id = ?`)
@@ -974,9 +971,9 @@ export async function handleDailyFieldMove(request, env, user, id) {
 
   let scopeCondition = "";
   if (scope === "item") {
-    scopeCondition = "AND field_scope IN ('item', 'both')";
+    scopeCondition = "AND field_scope = 'item'";
   } else if (scope === "update") {
-    scopeCondition = "AND field_scope IN ('update', 'both')";
+    scopeCondition = "AND field_scope = 'update'";
   }
 
   const neighbor = direction === "up"
