@@ -25,6 +25,13 @@ const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA journal_mode = WAL;");
 db.exec("PRAGMA synchronous = NORMAL;");
 db.exec("PRAGMA busy_timeout = 5000;");
+try {
+  db.exec("ALTER TABLE tech_daily_field_option ADD COLUMN value_en TEXT;");
+  db.exec("ALTER TABLE tech_daily_field_option ADD COLUMN value_vi TEXT;");
+} catch (e) {
+  // Cột đã tồn tại, bỏ qua
+}
+
 
 if (isNewDb) {
   console.log(`[LAN Server] Đang khởi tạo cơ sở dữ liệu mới tại ${dbPath}...`);

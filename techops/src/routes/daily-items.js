@@ -73,7 +73,7 @@ export async function pageDailyItems(request, env, user) {
   ], lang) : new Map();
   const reportInputs = combinedEntry ? fields.map((field) => `
     <div><label>${escapeHtml(resolveFieldLabel(field, lang, fieldTranslations))}</label>
-    ${renderFieldInput(field, L, "", optionValueById, lang, fieldTranslations)}</div>`).join("\n") : "";
+    ${renderFieldInput(field, L, "", optionValueById, lang, fieldTranslations, combinedEntry)}</div>`).join("\n") : "";
 
   const rows = items.results.map((it) => {
     const status = resolveOptionValue(it.latest_status || "-", lang, itemTranslations, true);
@@ -213,9 +213,15 @@ export async function pageDailyItemDetail(request, env, user, id) {
   const displayValue = (row) => {
     const field = fieldById[row.field_id];
     if (isIdentifierField(field)) return row.value;
-    return field?.input_type === "select"
-      ? resolveOptionValue(row.value, lang, detailTranslations, field?.label === "상태")
-      : resolveValueText(row, lang, detailTranslations);
+    if (field?.input_type === "select") {
+      const opt = field.options?.find((o) => o.value === row.value);
+      if (opt) {
+        if (lang === "vi" && opt.value_vi) return opt.value_vi;
+        if (lang === "en" && opt.value_en) return opt.value_en;
+      }
+      return resolveOptionValue(row.value, lang, detailTranslations, field?.label === "상태");
+    }
+    return resolveValueText(row, lang, detailTranslations);
   };
 
   const updateRows = updates.results.map((u) => {
@@ -235,10 +241,11 @@ export async function pageDailyItemDetail(request, env, user, id) {
     </div>`;
   }).join("");
 
+  const combinedEntry = hasDailyClassification(fields);
   const today = new Date().toISOString().slice(0, 10);
   const fieldInputs = activeDailyFields(fields).map((f) => `
         <div><label>${escapeHtml(resolveFieldLabel(f, lang, detailTranslations))}</label>
-        ${renderFieldInput(f, L, "", optionValueById, lang, detailTranslations)}</div>`).join("\n");
+        ${renderFieldInput(f, L, "", optionValueById, lang, detailTranslations, combinedEntry)}</div>`).join("\n");
   const itemTitle = translatedText(item.title, detailTranslations);
 
   return html(layout({
@@ -276,7 +283,7 @@ export async function pageDailyItemDetail(request, env, user, id) {
       ${updateRows || `<p class="muted">${escapeHtml(L.noUpdates)}</p>`}
     </div>
     ${CASCADING_SELECT_SCRIPT}
-    ${dailyClassificationScript()}${lotScript(lang)}` }));
+    ${combinedEntry ? dailyClassificationScript() : ""}${lotScript(lang)}` }));
 }
 
 export async function handleDailyItemAddUpdate(request, env, user, id) {

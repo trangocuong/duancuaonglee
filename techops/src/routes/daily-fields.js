@@ -268,7 +268,7 @@ export async function pageDailyFields(request, env, user) {
       <td>${escapeHtml(f.label_en || "-")}</td>
       <td>${escapeHtml(f.label_vi || "-")}</td>
       <td>${escapeHtml(L["inputType" + f.input_type[0].toUpperCase() + f.input_type.slice(1)])}</td>
-      <td>${f.input_type === "select" ? f.options.length : "-"}</td>
+      <td>${f.input_type === "select" ? `<a href="/daily-fields/${f.id}" style="font-weight:600;">${f.options.length} ${escapeHtml(L.colOptions)} ⚙️</a>` : "-"}</td>
       <td>${f.depends_on_field_id && fieldById[f.depends_on_field_id] ? escapeHtml(resolveFieldLabel(fieldById[f.depends_on_field_id], lang, fieldTranslations)) : "-"}</td>
     </tr>`).join("");
 
@@ -299,22 +299,41 @@ export async function pageDailyFields(request, env, user) {
         <label>${escapeHtml(L.fieldNameLabel)}</label>
         <input name="name" required>
         <p class="muted">${escapeHtml(L.fieldNameHint)}</p>
+        <details style="margin: 10px 0; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;">
+          <summary style="cursor: pointer; font-weight: 600; color: var(--accent);">🌐 ${escapeHtml(lang === "vi" ? "Cài đặt tên đa ngôn ngữ (Tùy chọn: Hàn / Anh / Việt)" : lang === "en" ? "Multilingual Name Settings (Optional: KO / EN / VI)" : "다국어 항목명 설정 (선택: 한국어 / 영어 / 베트남어)")}</summary>
+          <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            <div><label style="font-size: 13px; color: var(--muted);">${escapeHtml(lang === "vi" ? "Tiếng Hàn" : lang === "en" ? "Korean" : "한국어")}</label><input name="name_ko" placeholder="예: 소속부서"></div>
+            <div><label style="font-size: 13px; color: var(--muted);">${escapeHtml(lang === "vi" ? "Tiếng Anh" : lang === "en" ? "English" : "영어")}</label><input name="name_en" placeholder="e.g. Department"></div>
+            <div><label style="font-size: 13px; color: var(--muted);">${escapeHtml(lang === "vi" ? "Tiếng Việt" : lang === "en" ? "Vietnamese" : "베트남어")}</label><input name="name_vi" placeholder="Ví dụ: Bộ phận"></div>
+          </div>
+          <p class="muted" style="margin: 8px 0 0; font-size: 12px;">${escapeHtml(lang === "vi" ? "Nếu để trống các ô trên, hệ thống sẽ tự động nhận diện ngôn ngữ của Tên mục và dịch sang các ngôn ngữ còn lại." : lang === "en" ? "If left blank, the system will detect the language of the primary name and auto-translate." : "비워두면 위에서 입력한 항목명을 기반으로 자동 번역됩니다.")}</p>
+        </details>
         <div class="row">
           <div><label>${escapeHtml(L.fieldInputType)}</label>
-            <select name="input_type">
+            <select name="input_type" id="new-field-input-type">
               <option value="text">${escapeHtml(L.inputTypeText)}</option>
               <option value="textarea">${escapeHtml(L.inputTypeTextarea)}</option>
               <option value="select">${escapeHtml(L.inputTypeSelect)}</option>
             </select>
           </div>
-          <div><label>${escapeHtml(L.dependsOnLabel)}</label>
+          <div id="new-field-depends-box" style="display:none;"><label>${escapeHtml(L.dependsOnLabel)}</label>
             <select name="depends_on_field_id">
               <option value="">${escapeHtml(L.dependsOnNone)}</option>
               ${dependsOnOptions}
             </select>
+            <p class="muted" style="margin-top:4px;">${escapeHtml(L.dependsOnHint)}</p>
           </div>
         </div>
-        <p class="muted">${escapeHtml(L.dependsOnHint)}</p>
+        <script>
+        (function(){
+          var sel = document.getElementById('new-field-input-type');
+          var dep = document.getElementById('new-field-depends-box');
+          if (!sel || !dep) return;
+          function sync(){ dep.style.display = (sel.value === 'select') ? '' : 'none'; }
+          sel.addEventListener('change', sync);
+          sync();
+        })();
+        </script>
         <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.submit)}</button></div>
       </form>
     </div>
@@ -343,14 +362,27 @@ export async function handleDailyFieldCreate(request, env, user) {
     if (target) dependsOnFieldId = target.id;
   }
 
-  const tri = await resolveTrilingualText(env, name);
-  const label = tri.ko || name;
+  const nameKo = String(form.get("name_ko") || "").trim();
+  const nameEn = String(form.get("name_en") || "").trim();
+  const nameVi = String(form.get("name_vi") || "").trim();
+
+  let label, labelEn, labelVi;
+  if (nameKo || nameEn || nameVi) {
+    label = nameKo || name;
+    labelEn = nameEn || null;
+    labelVi = nameVi || null;
+  } else {
+    const tri = await resolveTrilingualText(env, name);
+    label = tri.ko || name;
+    labelEn = tri.en;
+    labelVi = tri.vi;
+  }
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || RETIRED_DAILY_FIELDS.has(name) || label === "LOTID" || name === "LOTID")) return plainText(lotWords[getLang(request)].retired, 400);
 
   const max = await env.DB.prepare(`SELECT COALESCE(MAX(sort_order), 0) AS m FROM tech_daily_field`).first();
   await env.DB.prepare(
     `INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order, depends_on_field_id) VALUES (?, ?, ?, ?, ?, ?)`
-  ).bind(label, tri.en, tri.vi, inputType, (max.m || 0) + 10, dependsOnFieldId).run();
+  ).bind(label, labelEn, labelVi, inputType, (max.m || 0) + 10, dependsOnFieldId).run();
 
   return redirect("/daily-fields");
 }
@@ -390,12 +422,24 @@ export async function pageDailyFieldDetail(request, env, user, id) {
   const options = await env.DB.prepare(`SELECT * FROM tech_daily_field_option WHERE field_id = ? ORDER BY sort_order, id`).bind(id).all();
   const isManagedStatusField = field.label === "상태";
   const parentValueById = Object.fromEntries(parentOptions.map((o) => [o.id, resolveOptionValue(o.value, lang, settingsTranslations, dependsOnField?.label === "상태")]));
-  const optionRows = options.results.map((o) => `
+  const optionRows = options.results.map((o, i) => `
     <tr>
+      <td>
+        <form method="post" action="/daily-fields/${field.id}/options/${o.id}/move" class="inline">
+          <input type="hidden" name="direction" value="up">
+          <button type="submit" class="secondary" title="${escapeHtml(L.moveUpTitle || "Up")}" ${i === 0 ? "disabled" : ""}>▲</button>
+        </form>
+        <form method="post" action="/daily-fields/${field.id}/options/${o.id}/move" class="inline">
+          <input type="hidden" name="direction" value="down">
+          <button type="submit" class="secondary" title="${escapeHtml(L.moveDownTitle || "Down")}" ${i === options.results.length - 1 ? "disabled" : ""}>▼</button>
+        </form>
+      </td>
       ${dependsOnField ? `<td>${escapeHtml(o.parent_option_id ? (parentValueById[o.parent_option_id] || "-") : "-")}</td>` : ""}
-      <td>${escapeHtml(resolveOptionValue(o.value, lang, settingsTranslations, isManagedStatusField))}</td>
+      <td><strong>${escapeHtml(o.value)}</strong></td>
+      <td>${escapeHtml(o.value_en || "-")}</td>
+      <td>${escapeHtml(o.value_vi || "-")}</td>
       <td>${isManagedStatusField ? "" : `<form method="post" action="/daily-fields/${field.id}/options/${o.id}/delete" onsubmit="return confirm('${escapeHtml(L.deleteOptionConfirm)}');">
-        <button type="submit" class="danger">${escapeHtml(L.deleteBtn)}</button>
+        <button type="submit" class="danger small">${escapeHtml(L.deleteBtn)}</button>
       </form>`}</td>
     </tr>`).join("");
 
@@ -413,10 +457,20 @@ export async function pageDailyFieldDetail(request, env, user, id) {
     ? `<p class="muted">${escapeHtml(L.statusOptionsManagedNotice)}</p>`
     : !canAddOptions
     ? `<p class="muted">${escapeHtml(L.noParentOptionsNotice.replace("{label}", resolveFieldLabel(dependsOnField, lang, settingsTranslations)))}</p>`
-    : `<form method="post" action="/daily-fields/${field.id}/options/new" class="row">
-        ${dependsOnField ? `<div><label>${escapeHtml(L.parentOptionLabel)}</label>${parentOptionSelect}</div>` : ""}
-        <div><label>${escapeHtml(L.addOptionPlaceholder)}</label><input name="value" placeholder="${escapeHtml(L.addOptionPlaceholder)}" required></div>
-        <div style="flex:0;align-self:end;"><button type="submit">${escapeHtml(L.submit)}</button></div>
+    : `<form method="post" action="/daily-fields/${field.id}/options/new" style="margin-bottom:16px;">
+        <div class="row">
+          ${dependsOnField ? `<div><label>${escapeHtml(L.parentOptionLabel)}</label>${parentOptionSelect}</div>` : ""}
+          <div style="flex:1;"><label>${escapeHtml(L.addOptionPlaceholder)} (${escapeHtml(lang === "vi" ? "Gốc / Hàn" : "기본 / 한국어")})</label><input name="value" placeholder="${escapeHtml(L.addOptionPlaceholder)}" required></div>
+          <div style="flex:0;align-self:end;"><button type="submit">${escapeHtml(L.submit)}</button></div>
+        </div>
+        <details style="margin-top:8px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;">
+          <summary style="cursor:pointer;font-weight:600;color:var(--accent);font-size:13px;">🌐 ${escapeHtml(lang === "vi" ? "Cài đặt giá trị đa ngôn ngữ (Tùy chọn: Tiếng Anh / Tiếng Việt)" : lang === "en" ? "Multilingual Option Values (Optional: EN / VI)" : "선택지 다국어 설정 (선택: 영어 / 베트남어)")}</summary>
+          <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label style="font-size:12px;color:var(--muted);">${escapeHtml(L.colLabelEn)}</label><input name="value_en" placeholder="e.g. Assessment"></div>
+            <div><label style="font-size:12px;color:var(--muted);">${escapeHtml(L.colLabelVi)}</label><input name="value_vi" placeholder="Ví dụ: Đánh giá"></div>
+          </div>
+          <p class="muted" style="margin:6px 0 0;font-size:12px;">${escapeHtml(lang === "vi" ? "Nếu để trống, hệ thống sẽ tự động hiển thị theo giá trị gốc hoặc tự động dịch." : "비워두면 기본값으로 표시되거나 자동 번역됩니다.")}</p>
+        </details>
       </form>`;
 
   const bulkImportForm = !canAddOptions ? "" : `
@@ -444,39 +498,70 @@ export async function pageDailyFieldDetail(request, env, user, id) {
         <label>${escapeHtml(L.fieldNameLabel)}</label>
         <input name="name" value="${escapeHtml(resolveFieldLabel(field, lang, settingsTranslations))}" required>
         <p class="muted">${escapeHtml(L.fieldNameHint)}</p>
+        <details style="margin: 10px 0; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;">
+          <summary style="cursor: pointer; font-weight: 600; color: var(--accent);">🌐 ${escapeHtml(lang === "vi" ? "Cài đặt tên đa ngôn ngữ (Tùy chọn: Hàn / Anh / Việt)" : lang === "en" ? "Multilingual Name Settings (Optional: KO / EN / VI)" : "다국어 항목명 설정 (선택: 한국어 / 영어 / 베트남어)")}</summary>
+          <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            <div><label style="font-size: 13px; color: var(--muted);">${escapeHtml(lang === "vi" ? "Tiếng Hàn" : lang === "en" ? "Korean" : "한국어")}</label><input name="name_ko" value="${escapeHtml(field.label || "")}" placeholder="예: 소속부서"></div>
+            <div><label style="font-size: 13px; color: var(--muted);">${escapeHtml(lang === "vi" ? "Tiếng Anh" : lang === "en" ? "English" : "영어")}</label><input name="name_en" value="${escapeHtml(field.label_en || "")}" placeholder="e.g. Department"></div>
+            <div><label style="font-size: 13px; color: var(--muted);">${escapeHtml(lang === "vi" ? "Tiếng Việt" : lang === "en" ? "Vietnamese" : "베트남어")}</label><input name="name_vi" value="${escapeHtml(field.label_vi || "")}" placeholder="Ví dụ: Bộ phận"></div>
+          </div>
+        </details>
         <div class="row">
           <div><label>${escapeHtml(L.fieldInputType)}</label>
-            <select name="input_type">
+            <select name="input_type" id="edit-field-input-type">
               <option value="text" ${field.input_type === "text" ? "selected" : ""}>${escapeHtml(L.inputTypeText)}</option>
               <option value="textarea" ${field.input_type === "textarea" ? "selected" : ""}>${escapeHtml(L.inputTypeTextarea)}</option>
               <option value="select" ${field.input_type === "select" ? "selected" : ""}>${escapeHtml(L.inputTypeSelect)}</option>
             </select>
           </div>
-          <div><label>${escapeHtml(L.dependsOnLabel)}</label>
+          <div id="edit-field-depends-box" style="${field.input_type === "select" ? "" : "display:none;"}"><label>${escapeHtml(L.dependsOnLabel)}</label>
             <select name="depends_on_field_id">
               <option value="">${escapeHtml(L.dependsOnNone)}</option>
               ${dependsOnOptionsHtml}
             </select>
+            <p class="muted" style="margin-top:4px;">${escapeHtml(L.dependsOnHint)}</p>
           </div>
         </div>
-        <p class="muted">${escapeHtml(L.dependsOnHint)}</p>
+        <script>
+        (function(){
+          var sel = document.getElementById('edit-field-input-type');
+          var dep = document.getElementById('edit-field-depends-box');
+          if (!sel || !dep) return;
+          function sync(){ dep.style.display = (sel.value === 'select') ? '' : 'none'; }
+          sel.addEventListener('change', sync);
+          sync();
+        })();
+        </script>
         <div style="margin-top:12px;"><button type="submit">${escapeHtml(L.save)}</button></div>
       </form>
       <form method="post" action="/daily-fields/${field.id}/delete" style="margin-top:12px;" onsubmit="return confirm('${escapeHtml(L.deleteFieldConfirm)}');">
         <button type="submit" class="danger">${escapeHtml(L.deleteBtn)}</button>
       </form>
     </div>
+    ${field.input_type === "select" ? `
     <div class="card">
       <h3 style="margin-top:0;">${escapeHtml(L.optionsHeading)}</h3>
       ${importNotice ? `<p class="muted">${escapeHtml(importNotice)}</p>` : ""}
       ${parentRequiredNotice ? `<p class="err">${escapeHtml(parentRequiredNotice)}</p>` : ""}
       ${addOptionForm}
       <table>
-        <thead><tr><th></th>${dependsOnField ? `<th>${escapeHtml(L.colParentOption)}</th>` : ""}<th>${escapeHtml(L.fieldLabel)}</th><th></th></tr></thead>
-        <tbody>${optionRows || `<tr><td colspan="${dependsOnField ? 3 : 2}" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
+        <thead>
+          <tr>
+            <th style="width:70px;">${escapeHtml(L.colSortOrder)}</th>
+            ${dependsOnField ? `<th>${escapeHtml(L.colParentOption)}</th>` : ""}
+            <th>${escapeHtml(lang === "vi" ? "Giá trị gốc (Hàn)" : "기본값 (한국어)")}</th>
+            <th>${escapeHtml(L.colLabelEn)}</th>
+            <th>${escapeHtml(L.colLabelVi)}</th>
+            <th style="width:70px;"></th>
+          </tr>
+        </thead>
+        <tbody>${optionRows || `<tr><td colspan="${dependsOnField ? 6 : 5}" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
       </table>
     </div>
-    ${bulkImportForm}` }));
+    ${bulkImportForm}` : `
+    <div class="card">
+      <p class="muted" style="margin:0;">ℹ️ ${escapeHtml(lang === "vi" ? `Mục này thuộc kiểu nhập ${L["inputType" + field.input_type[0].toUpperCase() + field.input_type.slice(1)]}. Danh sách lựa chọn chỉ áp dụng cho mục dạng "Danh sách chọn (select)".` : `This field uses ${field.input_type} input. Preset options only apply to select fields.`)}</p>
+    </div>`}` }));
 }
 
 export async function handleDailyFieldUpdate(request, env, user, id) {
@@ -503,15 +588,28 @@ export async function handleDailyFieldUpdate(request, env, user, id) {
   // 관리자가 지금 보고 있던(=현재 화면 언어로 보이던) 이름 그대로 다시 제출했다면 이름은
   // 안 바꾼 것이므로 재번역하지 않는다 — input_type만 바꾸는 흔한 경우에 매번 AI를
   // 호출해서 저장이 느려지는 걸 막기 위함.
-  const unchanged = name === resolveFieldLabel(field, lang);
-  const tri = unchanged
-    ? { ko: field.label, en: field.label_en, vi: field.label_vi }
-    : await resolveTrilingualText(env, name);
-  const label = tri.ko || name;
+  const nameKo = String(form.get("name_ko") || "").trim();
+  const nameEn = String(form.get("name_en") || "").trim();
+  const nameVi = String(form.get("name_vi") || "").trim();
+
+  let label, labelEn, labelVi;
+  if (nameKo || nameEn || nameVi) {
+    label = nameKo || name;
+    labelEn = nameEn || null;
+    labelVi = nameVi || null;
+  } else {
+    const unchanged = name === resolveFieldLabel(field, lang);
+    const tri = unchanged
+      ? { ko: field.label, en: field.label_en, vi: field.label_vi }
+      : await resolveTrilingualText(env, name);
+    label = tri.ko || name;
+    labelEn = tri.en;
+    labelVi = tri.vi;
+  }
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || label === "LOTID")) return plainText(lotWords[lang].retired, 400);
 
   await env.DB.prepare(`UPDATE tech_daily_field SET label = ?, label_en = ?, label_vi = ?, input_type = ?, depends_on_field_id = ? WHERE id = ?`)
-    .bind(label, tri.en, tri.vi, inputType, dependsOnFieldId, id).run();
+    .bind(label, labelEn, labelVi, inputType, dependsOnFieldId, id).run();
 
   // 이 필드가 더 이상 select 타입이 아니면, 이 필드에 의존하던 다른 필드들은 상위 항목을 잃는다.
   if (inputType !== "select") {
@@ -585,14 +683,19 @@ export async function handleDailyFieldOptionCreate(request, env, user, id) {
 
   if (parentOptionId === undefined) return redirect(`/daily-fields/${id}?needsParent=1`);
 
+  const valueEn = String(form.get("value_en") || "").trim() || null;
+  const valueVi = String(form.get("value_vi") || "").trim() || null;
+
   if (value) {
-    await warmTranslationCache(env, [value]);
+    if (!valueEn || !valueVi) {
+      await warmTranslationCache(env, [value]);
+    }
     const max = await env.DB.prepare(
       `SELECT COALESCE(MAX(sort_order), 0) AS m FROM tech_daily_field_option WHERE field_id = ?`
     ).bind(id).first();
     await env.DB.prepare(
-      `INSERT INTO tech_daily_field_option (field_id, value, sort_order, parent_option_id) VALUES (?, ?, ?, ?)`
-    ).bind(id, value, (max.m || 0) + 10, parentOptionId).run();
+      `INSERT INTO tech_daily_field_option (field_id, value, value_en, value_vi, sort_order, parent_option_id) VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(id, value, valueEn, valueVi, (max.m || 0) + 10, parentOptionId).run();
   }
   return redirect(`/daily-fields/${id}`);
 }

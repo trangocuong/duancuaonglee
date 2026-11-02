@@ -107,9 +107,15 @@ export async function attachFieldValues(env, lang, updates) {
   const displayValue = (row) => {
     const field = fieldById[row.field_id];
     if (isIdentifierField(field)) return row.value;
-    return field?.input_type === "select"
-      ? resolveOptionValue(row.value, lang, valueTranslations, field?.label === "상태")
-      : resolveValueText(row, lang, valueTranslations);
+    if (field?.input_type === "select") {
+      const opt = field.options?.find((o) => o.value === row.value);
+      if (opt) {
+        if (lang === "vi" && opt.value_vi) return opt.value_vi;
+        if (lang === "en" && opt.value_en) return opt.value_en;
+      }
+      return resolveOptionValue(row.value, lang, valueTranslations, field?.label === "상태");
+    }
+    return resolveValueText(row, lang, valueTranslations);
   };
   return updates.map((u) => {
     const raw = valuesByUpdate[u.id] || {};
@@ -134,7 +140,7 @@ export async function attachFieldValues(env, lang, updates) {
 // 필드가 depends_on_field_id 를 가지면(=캐스케이딩 드롭다운) 각 <option> 에 상위 선택지의
 // 실제 값을 data-parent 로 심어두고, <select> 자체에는 어느 상위 필드를 지켜봐야 하는지
 // data-depends-on 으로 표시해둔다. 실제 필터링은 pageDailyItemDetail 에 심어둔 공용 스크립트가 처리.
-export function renderFieldInput(field, L, value = "", optionValueById = {}, lang = DEFAULT_LANG, translationMap = new Map()) {
+export function renderFieldInput(field, L, value = "", optionValueById = {}, lang = DEFAULT_LANG, translationMap = new Map(), hasClassification = false) {
   const name = `field_${field.id}`;
   if (field.label === "LOTID") return lotInput(field, value, lang, escapeHtml);
   if (field.input_type === "textarea") {
@@ -145,7 +151,7 @@ export function renderFieldInput(field, L, value = "", optionValueById = {}, lan
     return `<textarea name="${name}">${escapeHtml(value)}</textarea>`;
   }
   if (field.input_type === "select") {
-    const classificationLevel = DAILY_CLASSIFICATION_FIELDS.indexOf(field.label);
+    const classificationLevel = hasClassification ? DAILY_CLASSIFICATION_FIELDS.indexOf(field.label) : -1;
     // Standard classifications use the complete workbook path, not the generic
     // parent-value filter. CSV imports may contain the same value on many paths.
     const dependsAttr = classificationLevel < 0 && field.depends_on_field_id ? ` data-depends-on="field_${field.depends_on_field_id}"` : "";
@@ -155,7 +161,15 @@ export function renderFieldInput(field, L, value = "", optionValueById = {}, lan
     const choices = classificationLevel >= 0 ? [...new Map(field.options.map((option) => [option.value, option])).values()] : field.options;
     const opts = choices.map((o) => {
       const parentAttr = classificationLevel < 0 && o.parent_option_id ? ` data-parent="${escapeHtml(optionValueById[o.parent_option_id] || "")}"` : "";
-      return `<option value="${escapeHtml(o.value)}"${parentAttr} ${o.value === value ? "selected" : ""}>${escapeHtml(resolveOptionValue(o.value, lang, translationMap, field.label === "상태"))}</option>`;
+      let optLabel = o.value;
+      if (lang === "vi" && o.value_vi) {
+        optLabel = o.value_vi;
+      } else if (lang === "en" && o.value_en) {
+        optLabel = o.value_en;
+      } else {
+        optLabel = resolveOptionValue(o.value, lang, translationMap, field.label === "상태");
+      }
+      return `<option value="${escapeHtml(o.value)}"${parentAttr} ${o.value === value ? "selected" : ""}>${escapeHtml(optLabel)}</option>`;
     }).join("");
     return `<select name="${name}"${dependsAttr}${classificationAttr}><option value=""></option>${opts}</select>`;
   }
@@ -190,6 +204,7 @@ export function dailyClassificationScript() {
   var rows=${JSON.stringify(DAILY_CLASSIFICATION_ROWS)};
   var selects=Array.prototype.slice.call(document.querySelectorAll('select[data-classification-level]'))
     .sort(function(a,b){ return Number(a.dataset.classificationLevel)-Number(b.dataset.classificationLevel); });
+  if(selects.length < 5) return;
   function syncFrom(level){
     for(var i=level+1;i<selects.length;i++){
       var prefixComplete=selects.slice(0,i).every(function(select){ return !!select.value; });

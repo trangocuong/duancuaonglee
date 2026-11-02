@@ -153,6 +153,8 @@ CREATE TABLE IF NOT EXISTS tech_daily_field_option (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   field_id INTEGER NOT NULL REFERENCES tech_daily_field(id) ON DELETE CASCADE,
   value TEXT NOT NULL,
+  value_en TEXT,
+  value_vi TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0,
   parent_option_id INTEGER REFERENCES tech_daily_field_option(id) ON DELETE CASCADE
 );
