@@ -31,7 +31,7 @@ import {
   handleDailyFieldTemplateApply, pageDailyFieldDetail,
   handleDailyFieldUpdate, handleDailyFieldDelete,
   handleDailyFieldMove, handleDailyFieldOptionCreate,
-  handleDailyFieldOptionDelete, handleDailyFieldOptionImport, handleDailyFieldOptionMove,
+  handleDailyFieldOptionDelete, handleDailyFieldOptionImport, handleDailyFieldOptionMove, handleDailyCardDesignerSave,
 } from "./src/routes/daily-fields.js";
 import { apiProductMatch } from "./src/modules/daily/daily-helpers.js";
 import {
@@ -222,6 +222,7 @@ export default {
       if (path === "/daily-fields" && method === "GET") return pageDailyFields(request, env, user);
       if (path === "/daily-fields/apply-standard" && method === "POST") return handleDailyFieldTemplateApply(request, env, user);
       if (path === "/daily-fields/new" && method === "POST") return handleDailyFieldCreate(request, env, user);
+      if (path === "/daily-fields/card-designer" && method === "POST") return handleDailyCardDesignerSave(request, env, user);
 
       const dailyFieldDetailMatch = path.match(/^\/daily-fields\/(\d+)$/);
       if (dailyFieldDetailMatch && method === "GET") return pageDailyFieldDetail(request, env, user, dailyFieldDetailMatch[1]);

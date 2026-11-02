@@ -113,4 +113,27 @@ export async function testNewFeatures({ check, env, db, adminHeaders, viewerHead
     check("non-admin does not see /daily-fields in subtabs", !htmlViewer.includes('href="/daily-fields"'));
     check("daily-reports includes #create-item-dialog modal", htmlViewer.includes('id="create-item-dialog"'));
   }
+
+  // 5. Test Card Designer & 2 Distinct Field Setting Sections
+  {
+    const resFields = await worker.fetch(new Request("https://x/daily-fields", { headers: adminHeaders }), env, {});
+    const htmlFields = await resFields.text();
+    check("daily-fields renders Section 1: Item Creation", htmlFields.includes('id="section-item"'));
+    check("daily-fields renders Section 2: Progress Updates", htmlFields.includes('id="section-update"'));
+    check("daily-fields renders Section 3: Card Designer", htmlFields.includes('id="card-designer"'));
+
+    const anyField = db.prepare("SELECT id FROM tech_daily_field LIMIT 1").get();
+    if (anyField) {
+      const fdCard = new FormData();
+      fdCard.append(`pos_${anyField.id}`, "highlight");
+      const resCardSave = await worker.fetch(new Request("https://x/daily-fields/card-designer", {
+        method: "POST",
+        headers: adminHeaders,
+        body: fdCard
+      }), env, {});
+      check("card-designer save returns redirect", resCardSave.status === 302 && resCardSave.headers.get("location")?.includes("cardSaved=1"));
+      const updatedField = db.prepare("SELECT card_position FROM tech_daily_field WHERE id = ?").get(anyField.id);
+      check("card-designer save updates field card_position to highlight", updatedField?.card_position === "highlight");
+    }
+  }
 }

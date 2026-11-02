@@ -71,6 +71,10 @@ export async function pageDailyItems(request, env, user) {
     ...fields.filter((field) => !((lang === "en" && field.label_en) || (lang === "vi" && field.label_vi))).map((field) => field.label),
     ...fields.flatMap((field) => field.options.map((option) => option.value)),
   ], lang) : new Map();
+  const fixedItemFields = fields.filter(f => (f.field_scope === "item" || f.field_scope === "both") && f.label !== "업무구분" && f.label !== "Phân loại công việc");
+  const fixedItemInputs = fixedItemFields.map((field) => `
+    <div><label>${escapeHtml(resolveFieldLabel(field, lang, fieldTranslations))}${field.is_required ? ' <span style="color:var(--danger)">*</span>' : ''}</label>
+    ${renderFieldInput(field, L, "", optionValueById, lang, fieldTranslations, false)}</div>`).join("\n");
   const reportInputs = combinedEntry ? fields.filter(f => f.field_scope !== "update").map((field) => `
     <div><label>${escapeHtml(resolveFieldLabel(field, lang, fieldTranslations))}</label>
     ${renderFieldInput(field, L, "", optionValueById, lang, fieldTranslations, combinedEntry)}</div>`).join("\n") : "";
@@ -148,6 +152,45 @@ export async function pageDailyItems(request, env, user) {
         <tbody>${rows || `<tr><td colspan="6" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
       </table>
     </div>
+    
+${combinedEntry ? "" : `  <dialog id="create-item-dialog" style="border:none;border-radius:12px;padding:0;max-width:560px;width:92vw;box-shadow:0 12px 32px rgba(0,0,0,0.35);background:var(--card-bg, #1a202c);color:inherit;">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;font-size:16px;">✨ ${escapeHtml(lang === "vi" ? "Tạo công việc mới" : "새 일일업무 등록")}</h3>
+      <button type="button" onclick="document.getElementById('create-item-dialog').close()" style="background:none;border:none;font-size:18px;cursor:pointer;color:inherit;padding:4px 8px;">✕</button>
+    </div>
+    <form method="post" action="/daily-items/new" style="padding:20px;">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colPart)} <span style="color:var(--danger)">*</span></label>
+            <select name="part" id="modal-item-part" required style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);">
+              <option value="SSD">SSD</option>
+              <option value="Module">Module</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colCategory)} <span style="color:var(--danger)">*</span></label>
+            <select name="category" id="modal-item-category" required style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);">
+              ${categorySelectOptions}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colTitle)} <span style="color:var(--danger)">*</span></label>
+          <input name="title" required placeholder="${escapeHtml(lang === "vi" ? "Ví dụ: Đánh giá FW NVMe SSD..." : "업무 제목을 입력하세요")}" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-weight:600;display:block;margin-bottom:4px;">${escapeHtml(L.colAssignee)}</label>
+          <input value="${escapeHtml(user.display_name)}" readonly aria-readonly="true" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.05);box-sizing:border-box;">
+        </div>
+        ${fixedItemInputs}
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;border-top:1px solid var(--border);padding-top:14px;">
+        <button type="button" class="secondary" onclick="document.getElementById('create-item-dialog').close()">${escapeHtml(L.cancel)}</button>
+        <button type="submit" class="daily-primary">${escapeHtml(lang === "vi" ? "Tạo & Tiếp tục" : L.submit)}</button>
+      </div>
+    </form>
+  </dialog>`}
     ${combinedEntry ? CASCADING_SELECT_SCRIPT + dailyClassificationScript() + lotScript(lang) : ""}` }));
 }
 

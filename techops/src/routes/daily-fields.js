@@ -242,65 +242,202 @@ export async function pageDailyFields(request, env, user) {
   if (user.role !== "admin") return forbiddenResponse(user, lang, L);
 
   const { fields } = await loadDailyFields(env);
-  const standardApplied = new URL(request.url).searchParams.has("standardApplied");
+  const url = new URL(request.url);
+  const standardApplied = url.searchParams.has("standardApplied");
+  const cardSaved = url.searchParams.has("cardSaved");
   const fieldById = Object.fromEntries(fields.map((f) => [f.id, f]));
   const fieldTranslations = await buildDisplayTranslationMap(
     env,
     fields.filter((field) => !((lang === "en" && field.label_en) || (lang === "vi" && field.label_vi))).map((field) => field.label),
     lang
   );
-  // fields는 이미 sort_order 순으로 정렬되어 있음 — 이 순서가 실제 업데이트 입력 폼
-  // (pageDailyItemDetail의 fieldInputs)에 그대로 반영된다. 위/아래 버튼은 인접한 필드와
-  // sort_order를 맞바꿔서 순서를 바꾼다.
-  const rows = fields.map((f, i) => `
+
+  const itemFields = fields.filter((f) => f.field_scope === "item" || f.field_scope === "both");
+  const updateFields = fields.filter((f) => f.field_scope === "update" || f.field_scope === "both");
+
+  const renderFieldRow = (f, i, list, scopeName) => `
     <tr>
       <td>
         <form method="post" action="/daily-fields/${f.id}/move" class="inline">
           <input type="hidden" name="direction" value="up">
+          <input type="hidden" name="scope" value="${scopeName}">
           <button type="submit" class="secondary" title="${escapeHtml(L.moveUpTitle)}" ${i === 0 ? "disabled" : ""}>▲</button>
         </form>
         <form method="post" action="/daily-fields/${f.id}/move" class="inline">
           <input type="hidden" name="direction" value="down">
-          <button type="submit" class="secondary" title="${escapeHtml(L.moveDownTitle)}" ${i === fields.length - 1 ? "disabled" : ""}>▼</button>
+          <input type="hidden" name="scope" value="${scopeName}">
+          <button type="submit" class="secondary" title="${escapeHtml(L.moveDownTitle)}" ${i === list.length - 1 ? "disabled" : ""}>▼</button>
         </form>
       </td>
-      <td>${f.label === "LOTID" ? "LOTID" : `<a href="/daily-fields/${f.id}">${escapeHtml(resolveFieldLabel(f, lang, fieldTranslations))}</a>`}</td>
+      <td><strong>${f.label === "LOTID" ? "LOTID" : `<a href="/daily-fields/${f.id}">${escapeHtml(resolveFieldLabel(f, lang, fieldTranslations))}</a>`}</strong></td>
       <td>${escapeHtml(f.label_en || "-")}</td>
       <td>${escapeHtml(f.label_vi || "-")}</td>
       <td>${escapeHtml(L["inputType" + f.input_type[0].toUpperCase() + f.input_type.slice(1)])}</td>
       <td>${f.input_type === "select" ? `<a href="/daily-fields/${f.id}" style="font-weight:600;">${f.options.length} ${escapeHtml(L.colOptions)} ⚙️</a>` : "-"}</td>
       <td>${f.depends_on_field_id && fieldById[f.depends_on_field_id] ? escapeHtml(resolveFieldLabel(fieldById[f.depends_on_field_id], lang, fieldTranslations)) : "-"}</td>
-      <td>${escapeHtml(f.field_scope === "item" ? (lang === "vi" ? "Tạo mục" : "항목") : f.field_scope === "update" ? (lang === "vi" ? "Tiến độ" : "보고") : (lang === "vi" ? "Cả hai" : "전체"))}</td>
-      <td>${escapeHtml(f.card_position === "badge" ? "Badge" : f.card_position === "highlight" ? "Highlight" : f.card_position === "hidden" ? "-" : "Body")}</td>
+      <td><span class="status-pill" style="font-size:11px;">${escapeHtml(f.field_scope === "both" ? (lang === "vi" ? "Cả hai" : "전체") : f.field_scope === "item" ? (lang === "vi" ? "Tạo mục" : "항목") : (lang === "vi" ? "Tiến độ" : "보고"))}</span></td>
+      <td><span class="status-pill" style="font-size:11px; background:${f.card_position === "badge" ? "var(--accent-soft)" : f.card_position === "highlight" ? "var(--warning)" : "transparent"};">${escapeHtml(f.card_position === "badge" ? "Badge" : f.card_position === "highlight" ? "Highlight" : f.card_position === "hidden" ? "Hidden" : "Body")}</span></td>
       <td style="text-align:center;">${f.is_required ? `<span style="color:var(--danger);font-weight:bold;">✓</span>` : "-"}</td>
-    </tr>`).join("");
+      <td><a href="/daily-fields/${f.id}" class="secondary small">✏️ ${escapeHtml(lang === "vi" ? "Cài đặt" : "설정")}</a></td>
+    </tr>`;
 
-  // 새로 만드는 필드는 항상 sort_order가 가장 크게 배정되므로, 기존 select 필드는
-  // 전부 "더 앞선" 필드가 되어 순환 참조 걱정 없이 상위 항목 후보가 될 수 있다.
+  const itemRows = itemFields.map((f, i) => renderFieldRow(f, i, itemFields, "item")).join("");
+  const updateRows = updateFields.map((f, i) => renderFieldRow(f, i, updateFields, "update")).join("");
+
   const selectFields = fields.filter((f) => f.input_type === "select");
   const dependsOnOptions = selectFields.map((f) =>
     `<option value="${f.id}">${escapeHtml(resolveFieldLabel(f, lang, fieldTranslations))}</option>`
   ).join("");
 
+  // Designer Field Items
+  const designerFieldItems = fields.map((f) => {
+    const label = resolveFieldLabel(f, lang, fieldTranslations);
+    const pos = f.card_position || "body";
+    const scopeLabel = f.field_scope === "item" ? (lang === "vi" ? "Tạo mục" : "항목") : f.field_scope === "update" ? (lang === "vi" ? "Tiến độ" : "보고") : (lang === "vi" ? "Cả hai" : "전체");
+    return `
+    <div class="designer-card-field" id="field-card-${f.id}" draggable="true" data-field-id="${f.id}" data-label="${escapeHtml(label)}" style="padding:10px 12px; background:var(--card-bg, #1e293b); border:1px solid var(--border); border-radius:8px; cursor:grab;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-weight:600; font-size:13px;">${escapeHtml(label)}</span>
+        <span class="status-pill" style="font-size:10px; padding:1px 6px;">${escapeHtml(scopeLabel)}</span>
+      </div>
+      <input type="hidden" name="pos_${f.id}" id="input_pos_${f.id}" value="${pos}">
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px;">
+        <button type="button" class="designer-pos-btn pos-badge ${pos === "badge" ? "active" : ""}" data-id="${f.id}" data-pos="badge" style="font-size:10px; padding:4px 2px; border-radius:4px; border:1px solid var(--border); background:${pos === "badge" ? "var(--accent)" : "transparent"}; color:${pos === "badge" ? "#fff" : "inherit"}; cursor:pointer;">🏷️ Badge</button>
+        <button type="button" class="designer-pos-btn pos-highlight ${pos === "highlight" ? "active" : ""}" data-id="${f.id}" data-pos="highlight" style="font-size:10px; padding:4px 2px; border-radius:4px; border:1px solid var(--border); background:${pos === "highlight" ? "var(--accent)" : "transparent"}; color:${pos === "highlight" ? "#fff" : "inherit"}; cursor:pointer;">⭐ Nổi bật</button>
+        <button type="button" class="designer-pos-btn pos-body ${pos === "body" ? "active" : ""}" data-id="${f.id}" data-pos="body" style="font-size:10px; padding:4px 2px; border-radius:4px; border:1px solid var(--border); background:${pos === "body" ? "var(--accent)" : "transparent"}; color:${pos === "body" ? "#fff" : "inherit"}; cursor:pointer;">📄 Body</button>
+        <button type="button" class="designer-pos-btn pos-hidden ${pos === "hidden" ? "active" : ""}" data-id="${f.id}" data-pos="hidden" style="font-size:10px; padding:4px 2px; border-radius:4px; border:1px solid var(--border); background:${pos === "hidden" ? "var(--accent)" : "transparent"}; color:${pos === "hidden" ? "#fff" : "inherit"}; cursor:pointer;">👁️ Ẩn</button>
+      </div>
+    </div>`;
+  }).join("");
+
   return html(layout({
     title: L.dailyFieldsHeading, user, lang, activeNav: "daily", mainClass: "daily-work-page", body: `
     ${dailyWorkSubtabs(L, "settings", user)}
-    <div class="card">
-      <h2 style="margin-top:0;">${escapeHtml(L.classificationStandardHeading || "일일보고 분류 기준")}</h2>
-      ${standardApplied ? `<p role="status">${escapeHtml(L.standardAppliedNotice || "표준 분류와 LOTID를 적용하고 기존 보고 이력을 삭제했습니다.")}</p>` : ""}
-      <p class="muted">${escapeHtml(L.standardDesc || "MDL·SSD 통합관리기준의 70개 조합을 사용합니다. 화면에서는 기존 파트명에 맞춰 MDL을 Module로 표시합니다.")}</p>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;">
-        ${[...DAILY_CLASSIFICATION_FIELDS, "Product Info.", "LOTID", "LOT 조회 결과"].map((label, index, all) => `<span style="display:flex;gap:8px;align-items:center;"><strong style="padding:8px 12px;background:var(--accent-soft);color:var(--accent-soft-text);border-radius:6px;">${escapeHtml(label)}</strong>${index < all.length - 1 ? "→" : ""}</span>`).join("")}
+
+    <!-- Thông báo kết quả -->
+    ${cardSaved ? `<div class="card" style="background:var(--accent-soft);color:var(--accent-soft-text);padding:12px 18px;border-radius:8px;font-weight:600;margin-bottom:16px;">✅ ${escapeHtml(lang === "vi" ? "Đã lưu thiết kế Card báo cáo thành công!" : "카드 디자인이 성공적으로 저장되었습니다.")}</div>` : ""}
+    ${standardApplied ? `<div class="card" style="background:var(--accent-soft);color:var(--accent-soft-text);padding:12px 18px;border-radius:8px;font-weight:600;margin-bottom:16px;">${escapeHtml(L.standardAppliedNotice || "표준 분류와 LOTID를 적용하고 기존 보고 이력을 삭제했습니다.")}</div>` : ""}
+
+    <!-- VÙNG 1: Cài đặt thông tin khi tạo mục mới -->
+    <div class="card" id="section-item" style="border-top: 4px solid var(--accent, #3b82f6);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div>
+          <h2 style="margin:0; font-size:18px;">📋 ${escapeHtml(lang === "vi" ? "1. Cài đặt thông tin khi tạo mục mới (Form Tạo công việc)" : "새 항목 등록 설정")}</h2>
+          <p class="muted" style="margin:4px 0 0; font-size:13px;">${escapeHtml(lang === "vi" ? "Các trường cố định khi đăng ký một mục công việc mới (Ví dụ: Sản phẩm, Phân loại, Part No...). Thứ tự sắp xếp ở đây là thứ tự hiển thị trong form tạo mục." : "새 업무 등록 시 입력하는 고정 정보 항목입니다. 위/아래 버튼으로 생성 폼 순서를 조정합니다.")}</p>
+        </div>
+        <span class="status-pill" style="font-weight:600;">${itemFields.length} ${escapeHtml(lang === "vi" ? "trường tạo mục" : "항목")}</span>
       </div>
-      <form method="post" action="/daily-fields/apply-standard" onsubmit="return confirm('${escapeHtml(L.applyStandardConfirm || "기존 일일보고 이력과 현재 항목 설정을 삭제하고 표준 설정으로 교체합니다. 계속하시겠습니까?")}');">
-        <button type="submit" class="secondary">${escapeHtml(L.applyStandardBtn || "표준 설정 적용")}</button>
+      <table>
+        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Phạm vi" : "범위")}</th><th>${escapeHtml(lang === "vi" ? "Vị trí Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th></th></tr></thead>
+        <tbody>${itemRows || `<tr><td colspan="11" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
+      </table>
+    </div>
+
+    <!-- VÙNG 2: Cài đặt nội dung báo cáo tiến độ hàng ngày -->
+    <div class="card" id="section-update" style="border-top: 4px solid #10b981; margin-top:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div>
+          <h2 style="margin:0; font-size:18px;">📝 ${escapeHtml(lang === "vi" ? "2. Cài đặt nội dung báo cáo tiến độ hàng ngày (Form Báo cáo)" : "일일 진척 보고 설정")}</h2>
+          <p class="muted" style="margin:4px 0 0; font-size:13px;">${escapeHtml(lang === "vi" ? "Các trường nhập liệu tiến độ mỗi ngày (Ví dụ: Trạng thái, Công đoạn, Nội dung, Số lượng, Suất, Sự cố/Biện pháp...). Thứ tự ở đây là thứ tự hiển thị trong form báo cáo." : "매일 작성하는 일일 업무 진척 보고 항목입니다. 위/아래 버튼으로 보고 폼 순서를 조정합니다.")}</p>
+        </div>
+        <span class="status-pill" style="font-weight:600;">${updateFields.length} ${escapeHtml(lang === "vi" ? "trường tiến độ" : "항목")}</span>
+      </div>
+      <table>
+        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Phạm vi" : "범위")}</th><th>${escapeHtml(lang === "vi" ? "Vị trí Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th></th></tr></thead>
+        <tbody>${updateRows || `<tr><td colspan="11" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
+      </table>
+    </div>
+
+    <!-- VÙNG 3: Card Designer Trực Quan -->
+    <div class="card" id="card-designer" style="margin-top:24px; border: 2px solid var(--accent, #3b82f6); border-radius: 12px; padding: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <div>
+          <h2 style="margin:0; font-size:18px; display:flex; align-items:center; gap:8px;">🎨 ${escapeHtml(lang === "vi" ? "3. Card Designer — Thiết kế bố cục Card báo cáo trực quan" : "카드 디자이너")}</h2>
+          <p class="muted" style="margin:4px 0 0; font-size:13px;">${escapeHtml(lang === "vi" ? "Kéo thả thẻ trường hoặc bấm nút để chọn vị trí trên Card báo cáo. Xem ngay mẫu Card thực tế thay đổi trực tiếp." : "카드의 각 위치에 항목을 드래그하거나 버튼으로 지정하세요.")}</p>
+        </div>
+        <button type="submit" form="card-designer-form" class="daily-primary" style="padding:10px 22px; font-weight:bold; font-size:14px; cursor:pointer;">💾 ${escapeHtml(lang === "vi" ? "Lưu thiết kế Card" : "카드 디자인 저장")}</button>
+      </div>
+
+      <form id="card-designer-form" method="post" action="/daily-fields/card-designer">
+        <div style="display:grid; grid-template-columns: minmax(280px, 340px) 1fr; gap:20px; align-items:start;">
+          
+          <!-- Cột 1: Danh sách trường (Palette) -->
+          <div style="background:var(--bg, #0f172a); border:1px solid var(--border); border-radius:10px; padding:16px;">
+            <h3 style="margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">${escapeHtml(lang === "vi" ? "Các trường dữ liệu" : "항목 목록")} (${fields.length})</h3>
+            <p class="muted" style="font-size:11px; margin-bottom:12px;">${escapeHtml(lang === "vi" ? "Kéo thẻ sang Preview hoặc bấm nút chọn vị trí:" : "드래그하거나 버튼을 클릭하세요:")}</p>
+            <div style="display:flex; flex-direction:column; gap:8px; max-height:540px; overflow-y:auto; padding-right:4px;">
+              ${designerFieldItems}
+            </div>
+          </div>
+
+          <!-- Cột 2: Khung xem trước Card trực quan (Interactive Live Card Preview) -->
+          <div style="background:var(--bg, #0f172a); border:1px solid var(--border); border-radius:10px; padding:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h3 style="margin:0; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); font-weight:bold;">📱 ${escapeHtml(lang === "vi" ? "Mô phỏng Card Báo Cáo Thực Tế (Live Preview)" : "실시간 카드 미리보기")}</h3>
+              <span class="muted" style="font-size:11px;">${escapeHtml(lang === "vi" ? "Tự động cập nhật theo vị trí chọn" : "실시간 반영")}</span>
+            </div>
+
+            <!-- Khung Card mẫu -->
+            <article class="daily-overview" style="margin:0; border:1px solid var(--border); border-radius:10px; padding:16px; background:var(--card-bg, #1e293b); box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+              
+              <!-- Header Card -->
+              <div class="daily-overview-head" style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:12px;">
+                <div>
+                  <div class="muted" style="font-size:12px;">SSD · Đánh giá (Evaluation)</div>
+                  <h4 style="margin:4px 0 0; font-size:16px; color:var(--text, #fff);"><a href="#preview" onclick="event.preventDefault();" style="text-decoration:none; color:inherit; font-weight:bold;">[SSD] [Đánh giá FW NVMe 512GB] [EVT Cycle Test]</a></h4>
+                </div>
+                <div style="text-align:right;">
+                  <span class="status-pill done" style="font-size:12px;">Đang tiến hành</span>
+                  <div class="muted" style="font-size:11px; margin-top:4px;">Người phụ trách: Nguyễn Văn A</div>
+                  <div class="muted" style="font-size:11px;">🕒 2026-11-02 (09:30)</div>
+                </div>
+              </div>
+
+              <!-- Zone 1: Badges -->
+              <div style="margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:6px;">
+                  🏷️ ${escapeHtml(lang === "vi" ? "Huy hiệu / Tag (Badge - góc trên)" : "상단 뱃지/태그 영역")}
+                </div>
+                <div id="dropzone-badge" class="designer-dropzone" data-pos="badge" style="min-height:38px; border:2px dashed var(--accent-soft, #3b82f6); border-radius:8px; padding:6px; display:flex; flex-wrap:wrap; gap:6px; background:rgba(59,130,246,0.06); align-items:center;"></div>
+              </div>
+
+              <!-- Zone 2: Highlight -->
+              <div style="margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:700; color:var(--warning, #eab308); text-transform:uppercase; margin-bottom:6px;">
+                  ⭐ ${escapeHtml(lang === "vi" ? "Dòng nổi bật (Highlight - chữ to đậm)" : "강조 텍스트 영역")}
+                </div>
+                <div id="dropzone-highlight" class="designer-dropzone" data-pos="highlight" style="min-height:42px; border:2px dashed var(--warning, #eab308); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; background:rgba(234,179,8,0.06);"></div>
+              </div>
+
+              <!-- Zone 3: Body Content -->
+              <div style="margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:700; color:var(--text, #cbd5e1); text-transform:uppercase; margin-bottom:6px;">
+                  📄 ${escapeHtml(lang === "vi" ? "Nội dung chính (Body Content)" : "본문 일반 내용 영역")}
+                </div>
+                <div id="dropzone-body" class="designer-dropzone" data-pos="body" style="min-height:60px; border:2px dashed var(--border); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; background:rgba(255,255,255,0.02);"></div>
+              </div>
+
+              <!-- Zone 4: Hidden -->
+              <div>
+                <details style="border:1px solid var(--border); border-radius:8px; padding:8px 12px; background:rgba(0,0,0,0.2);">
+                  <summary style="cursor:pointer; font-size:12px; font-weight:600; color:var(--muted);">${escapeHtml(lang === "vi" ? "👁️‍🗨️ Xem các trường Bị ẩn khỏi Card (Chỉ xem khi bấm chi tiết)" : "숨김 항목 목록")}</summary>
+                  <div id="dropzone-hidden" class="designer-dropzone" data-pos="hidden" style="min-height:36px; border:2px dashed var(--muted); border-radius:6px; padding:6px; display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; background:rgba(0,0,0,0.1); align-items:center;"></div>
+                </details>
+              </div>
+
+            </article>
+
+          </div>
+        </div>
       </form>
     </div>
-    <div class="card">
-      <h2 style="margin-top:0;">${escapeHtml(L.newFieldHeading)}</h2>
+
+    <!-- VÙNG 4: Thêm trường mới -->
+    <div class="card" style="margin-top:24px;">
+      <h2 style="margin-top:0;">➕ ${escapeHtml(L.newFieldHeading)}</h2>
       <form method="post" action="/daily-fields/new">
         <label>${escapeHtml(L.fieldNameLabel)}</label>
-        <input name="name" required>
+        <input name="name" required placeholder="${escapeHtml(lang === "vi" ? "Nhập tên trường mới..." : "새 항목명을 입력하세요")}">
         <p class="muted">${escapeHtml(L.fieldNameHint)}</p>
         <details style="margin: 10px 0; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;">
           <summary style="cursor: pointer; font-weight: 600; color: var(--accent);">🌐 ${escapeHtml(lang === "vi" ? "Cài đặt tên đa ngôn ngữ (Tùy chọn: Hàn / Anh / Việt)" : lang === "en" ? "Multilingual Name Settings (Optional: KO / EN / VI)" : "다국어 항목명 설정 (선택: 한국어 / 영어 / 베트남어)")}</summary>
@@ -365,15 +502,149 @@ export async function pageDailyFields(request, env, user) {
         <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.submit)}</button></div>
       </form>
     </div>
-    <div class="card">
-      <h2 style="margin-top:0;">${escapeHtml(L.dailyItemsHeading)}</h2>
-      <p><a href="/daily-fields/import">CSV Import</a> · <a href="/daily-fields/export">CSV Export</a></p>
-      <table>
-        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Phạm vi" : "범위")}</th><th>${escapeHtml(lang === "vi" ? "Kiểu Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
-      </table>
-    </div>` }));
+
+    <!-- Tiêu chuẩn phân loại chuẩn -->
+    <div class="card" style="margin-top:24px;">
+      <h2 style="margin-top:0;">${escapeHtml(L.classificationStandardHeading || "일일보고 분류 기준")}</h2>
+      <p class="muted">${escapeHtml(L.standardDesc || "MDL·SSD 통합관리기준의 70개 조합을 사용합니다. 화면에서는 기존 파트명에 맞춰 MDL을 Module로 표시합니다.")}</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;">
+        ${[...DAILY_CLASSIFICATION_FIELDS, "Product Info.", "LOTID", "LOT 조회 결과"].map((label, index, all) => `<span style="display:flex;gap:8px;align-items:center;"><strong style="padding:8px 12px;background:var(--accent-soft);color:var(--accent-soft-text);border-radius:6px;">${escapeHtml(label)}</strong>${index < all.length - 1 ? "→" : ""}</span>`).join("")}
+      </div>
+      <form method="post" action="/daily-fields/apply-standard" onsubmit="return confirm('${escapeHtml(L.applyStandardConfirm || "기존 일일보고 이력과 현재 항목 설정을 삭제하고 표준 설정으로 교체합니다. 계속하시겠습니까?")}');">
+        <button type="submit" class="secondary">${escapeHtml(L.applyStandardBtn || "표준 설정 적용")}</button>
+      </form>
+      <p style="margin-top:16px;"><a href="/daily-fields/import">CSV Import</a> · <a href="/daily-fields/export">CSV Export</a></p>
+    </div>
+
+    <!-- Client-side script cho Card Designer -->
+    <script>
+    (function() {
+      var fieldsData = ${JSON.stringify(fields.map(f => ({
+        id: f.id,
+        label: resolveFieldLabel(f, lang, fieldTranslations),
+        pos: f.card_position || "body"
+      })))};
+
+      function escapeText(s) {
+        var el = document.createElement('div');
+        el.textContent = s;
+        return el.innerHTML;
+      }
+
+      function renderDesignerZones() {
+        var badgeZone = document.getElementById("dropzone-badge");
+        var highlightZone = document.getElementById("dropzone-highlight");
+        var bodyZone = document.getElementById("dropzone-body");
+        var hiddenZone = document.getElementById("dropzone-hidden");
+        if (!badgeZone || !highlightZone || !bodyZone || !hiddenZone) return;
+
+        badgeZone.innerHTML = "";
+        highlightZone.innerHTML = "";
+        bodyZone.innerHTML = "";
+        hiddenZone.innerHTML = "";
+
+        fieldsData.forEach(function(f) {
+          var input = document.getElementById("input_pos_" + f.id);
+          var pos = input ? input.value : f.pos;
+
+          var cardEl = document.getElementById("field-card-" + f.id);
+          if (cardEl) {
+            cardEl.querySelectorAll(".designer-pos-btn").forEach(function(btn) {
+              if (btn.dataset.pos === pos) {
+                btn.style.background = "var(--accent)";
+                btn.style.color = "#fff";
+                btn.classList.add("active");
+              } else {
+                btn.style.background = "transparent";
+                btn.style.color = "inherit";
+                btn.classList.remove("active");
+              }
+            });
+          }
+
+          if (pos === "badge") {
+            var item = document.createElement("span");
+            item.className = "status-pill";
+            item.style.cssText = "background:var(--accent-soft);color:var(--accent-soft-text);border:1px solid var(--border);padding:3px 8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;";
+            item.innerHTML = "<strong>" + escapeText(f.label) + ":</strong> <span>Mẫu</span> <span style='font-size:11px;opacity:0.7;' title='Chuyển sang Ẩn'>✕</span>";
+            item.onclick = function() { setFieldPos(f.id, "hidden"); };
+            badgeZone.appendChild(item);
+          } else if (pos === "highlight") {
+            var item = document.createElement("div");
+            item.style.cssText = "font-size:14px;font-weight:600;color:var(--accent);display:flex;justify-content:space-between;align-items:center;background:rgba(234,179,8,0.08);padding:4px 8px;border-radius:4px;border:1px solid rgba(234,179,8,0.2);";
+            item.innerHTML = "<span>⚡ " + escapeText(f.label) + ": <strong>[Giá trị nổi bật mẫu]</strong></span> <button type='button' style='background:none;border:none;cursor:pointer;color:inherit;font-size:12px;' title='Chuyển sang Ẩn'>✕</button>";
+            item.querySelector("button").onclick = function() { setFieldPos(f.id, "hidden"); };
+            highlightZone.appendChild(item);
+          } else if (pos === "body") {
+            var item = document.createElement("div");
+            item.style.cssText = "font-size:13px;display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-bottom:1px solid var(--border);";
+            item.innerHTML = "<span>• <strong>" + escapeText(f.label) + "</strong>: [Chi tiết nội dung mẫu...]</span> <button type='button' style='background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;' title='Chuyển sang Ẩn'>✕</button>";
+            item.querySelector("button").onclick = function() { setFieldPos(f.id, "hidden"); };
+            bodyZone.appendChild(item);
+          } else if (pos === "hidden") {
+            var item = document.createElement("span");
+            item.className = "status-pill";
+            item.style.cssText = "font-size:11px;padding:2px 6px;background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid var(--border);display:inline-flex;align-items:center;gap:4px;cursor:pointer;";
+            item.innerHTML = escapeText(f.label) + " <span title='Hiện lại vào Body'>+</span>";
+            item.onclick = function() { setFieldPos(f.id, "body"); };
+            hiddenZone.appendChild(item);
+          }
+        });
+
+        if (!badgeZone.children.length) badgeZone.innerHTML = "<span class='muted' style='font-size:12px;padding:4px;'>Chưa có trường nào dạng Badge (Thả trường vào đây)</span>";
+        if (!highlightZone.children.length) highlightZone.innerHTML = "<span class='muted' style='font-size:12px;padding:4px;'>Chưa có trường nào dạng Highlight (Thả trường vào đây)</span>";
+        if (!bodyZone.children.length) bodyZone.innerHTML = "<span class='muted' style='font-size:12px;padding:4px;'>Chưa có trường nào dạng Body (Thả trường vào đây)</span>";
+        if (!hiddenZone.children.length) hiddenZone.innerHTML = "<span class='muted' style='font-size:12px;padding:4px;'>Không có trường ẩn</span>";
+      }
+
+      function setFieldPos(fieldId, newPos) {
+        var input = document.getElementById("input_pos_" + fieldId);
+        if (input) input.value = newPos;
+        var f = fieldsData.find(function(x) { return x.id === fieldId; });
+        if (f) f.pos = newPos;
+        renderDesignerZones();
+      }
+
+      document.querySelectorAll(".designer-pos-btn").forEach(function(btn) {
+        btn.addEventListener("click", function(e) {
+          e.preventDefault();
+          setFieldPos(Number(this.dataset.id), this.dataset.pos);
+        });
+      });
+
+      var draggedFieldId = null;
+      document.querySelectorAll(".designer-card-field").forEach(function(el) {
+        el.addEventListener("dragstart", function(e) {
+          draggedFieldId = Number(this.dataset.fieldId);
+          e.dataTransfer.setData("text/plain", draggedFieldId);
+        });
+      });
+
+      document.querySelectorAll(".designer-dropzone").forEach(function(zone) {
+        zone.addEventListener("dragover", function(e) {
+          e.preventDefault();
+          this.style.borderColor = "var(--accent)";
+        });
+        zone.addEventListener("dragleave", function(e) {
+          this.style.borderColor = "";
+        });
+        zone.addEventListener("drop", function(e) {
+          e.preventDefault();
+          this.style.borderColor = "";
+          var fieldId = draggedFieldId || Number(e.dataTransfer.getData("text/plain"));
+          var targetPos = this.dataset.pos;
+          if (fieldId && targetPos) {
+            setFieldPos(fieldId, targetPos);
+          }
+        });
+      });
+
+      renderDesignerZones();
+    })();
+    </script>
+` }));
 }
+
 
 export async function handleDailyFieldCreate(request, env, user) {
   if (user.role !== "admin") return redirect("/daily-fields");
@@ -696,17 +967,25 @@ export async function handleDailyFieldMove(request, env, user, id) {
   if (user.role !== "admin") return redirect("/daily-fields");
   const form = await request.formData();
   const direction = String(form.get("direction") || "");
+  const scope = String(form.get("scope") || ""); // "item" or "update" or ""
 
-  const field = await env.DB.prepare(`SELECT id, sort_order FROM tech_daily_field WHERE id = ?`).bind(id).first();
+  const field = await env.DB.prepare(`SELECT id, sort_order, field_scope FROM tech_daily_field WHERE id = ?`).bind(id).first();
   if (!field) return redirect("/daily-fields");
+
+  let scopeCondition = "";
+  if (scope === "item") {
+    scopeCondition = "AND field_scope IN ('item', 'both')";
+  } else if (scope === "update") {
+    scopeCondition = "AND field_scope IN ('update', 'both')";
+  }
 
   const neighbor = direction === "up"
     ? await env.DB.prepare(
-        `SELECT id, sort_order FROM tech_daily_field WHERE (sort_order < ?) OR (sort_order = ? AND id < ?) ORDER BY sort_order DESC, id DESC LIMIT 1`
+        `SELECT id, sort_order FROM tech_daily_field WHERE ((sort_order < ?) OR (sort_order = ? AND id < ?)) ${scopeCondition} ORDER BY sort_order DESC, id DESC LIMIT 1`
       ).bind(field.sort_order, field.sort_order, field.id).first()
     : direction === "down"
     ? await env.DB.prepare(
-        `SELECT id, sort_order FROM tech_daily_field WHERE (sort_order > ?) OR (sort_order = ? AND id > ?) ORDER BY sort_order ASC, id ASC LIMIT 1`
+        `SELECT id, sort_order FROM tech_daily_field WHERE ((sort_order > ?) OR (sort_order = ? AND id > ?)) ${scopeCondition} ORDER BY sort_order ASC, id ASC LIMIT 1`
       ).bind(field.sort_order, field.sort_order, field.id).first()
     : null;
 
@@ -717,7 +996,7 @@ export async function handleDailyFieldMove(request, env, user, id) {
     ]);
   }
 
-  return redirect("/daily-fields");
+  return redirect(scope ? `/daily-fields#section-${scope}` : "/daily-fields");
 }
 
 // depends_on_field_id 가 있는 필드는 반드시 그 상위 필드에 실제로 속한 선택지 id 를
@@ -863,4 +1142,26 @@ export async function handleDailyFieldOptionMove(request, env, user, fieldId, op
   }
 
   return redirect(`/daily-fields/${fieldId}`);
+}
+
+
+export async function handleDailyCardDesignerSave(request, env, user) {
+  if (user.role !== "admin") return redirect("/daily-fields");
+  const form = await request.formData();
+  const { fields } = await loadDailyFields(env);
+  const statements = [];
+  for (const f of fields) {
+    const pos = form.get(`pos_${f.id}`);
+    if (pos && ["badge", "highlight", "body", "hidden"].includes(String(pos))) {
+      const showInCard = pos === "hidden" ? 0 : 1;
+      statements.push(
+        env.DB.prepare(`UPDATE tech_daily_field SET card_position = ?, show_in_card = ? WHERE id = ?`)
+          .bind(String(pos), showInCard, f.id)
+      );
+    }
+  }
+  if (statements.length) {
+    await env.DB.batch(statements);
+  }
+  return redirect("/daily-fields?cardSaved=1#card-designer");
 }
