@@ -270,8 +270,9 @@ export async function pageDailyFields(request, env, user) {
       <td>${escapeHtml(L["inputType" + f.input_type[0].toUpperCase() + f.input_type.slice(1)])}</td>
       <td>${f.input_type === "select" ? `<a href="/daily-fields/${f.id}" style="font-weight:600;">${f.options.length} ${escapeHtml(L.colOptions)} ⚙️</a>` : "-"}</td>
       <td>${f.depends_on_field_id && fieldById[f.depends_on_field_id] ? escapeHtml(resolveFieldLabel(fieldById[f.depends_on_field_id], lang, fieldTranslations)) : "-"}</td>
+      <td>${escapeHtml(f.field_scope === "item" ? (lang === "vi" ? "Tạo mục" : "항목") : f.field_scope === "update" ? (lang === "vi" ? "Tiến độ" : "보고") : (lang === "vi" ? "Cả hai" : "전체"))}</td>
+      <td>${escapeHtml(f.card_position === "badge" ? "Badge" : f.card_position === "highlight" ? "Highlight" : f.card_position === "hidden" ? "-" : "Body")}</td>
       <td style="text-align:center;">${f.is_required ? `<span style="color:var(--danger);font-weight:bold;">✓</span>` : "-"}</td>
-      <td style="text-align:center;">${f.show_in_card !== 0 ? `<span style="color:var(--success);font-weight:bold;">✓</span>` : "-"}</td>
     </tr>`).join("");
 
   // 새로 만드는 필드는 항상 sort_order가 가장 크게 배정되므로, 기존 select 필드는
@@ -336,14 +337,29 @@ export async function pageDailyFields(request, env, user) {
           sync();
         })();
         </script>
+        <div class="row" style="margin:12px 0;">
+          <div>
+            <label style="font-weight:600;">${escapeHtml(lang === "vi" ? "Phạm vi hiển thị (Form)" : "적용 범위")}</label>
+            <select name="field_scope">
+              <option value="both">${escapeHtml(lang === "vi" ? "Cả hai (Tạo mục & Cập nhật tiến độ)" : "전체 (항목 등록 & 진척 보고)")}</option>
+              <option value="item">${escapeHtml(lang === "vi" ? "Cố định khi tạo mục mới (Sản phẩm, Part No...)" : "새 항목 등록 시 고정 정보")}</option>
+              <option value="update">${escapeHtml(lang === "vi" ? "Tiến độ hàng ngày (Trạng thái, Công đoạn, Số lượng...)" : "일일 진척 보고 시에만 입력")}</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight:600;">${escapeHtml(lang === "vi" ? "Card Designer (Vị trí trên Card)" : "카드 표시 스타일")}</label>
+            <select name="card_position">
+              <option value="body">${escapeHtml(lang === "vi" ? "Khối nội dung chính (Dòng chuẩn)" : "본문 일반 내용")}</option>
+              <option value="badge">${escapeHtml(lang === "vi" ? "Huy hiệu nhỏ / Tag (Góc trên)" : "상단 뱃지/태그")}</option>
+              <option value="highlight">${escapeHtml(lang === "vi" ? "Dòng nổi bật (Chữ to, đậm)" : "강조 텍스트 (굵은 글씨)")}</option>
+              <option value="hidden">${escapeHtml(lang === "vi" ? "Ẩn khỏi mặt Card (Chỉ xem khi mở chi tiết)" : "카드 숨김 (상세 보기에서만 표시)")}</option>
+            </select>
+          </div>
+        </div>
         <div style="display:flex;gap:20px;align-items:center;margin:12px 0;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
             <input type="checkbox" name="is_required" style="width:auto;margin:0;">
             <span>${escapeHtml(lang === "vi" ? "Bắt buộc nhập" : lang === "en" ? "Required" : "필수 입력")}</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
-            <input type="checkbox" name="show_in_card" checked style="width:auto;margin:0;">
-            <span>${escapeHtml(lang === "vi" ? "Hiển thị trên Card báo cáo" : lang === "en" ? "Show in Report Card" : "보고서 카드에 표시")}</span>
           </label>
         </div>
         <div style="margin-top:16px;"><button type="submit">${escapeHtml(L.submit)}</button></div>
@@ -353,7 +369,7 @@ export async function pageDailyFields(request, env, user) {
       <h2 style="margin-top:0;">${escapeHtml(L.dailyItemsHeading)}</h2>
       <p><a href="/daily-fields/import">CSV Import</a> · <a href="/daily-fields/export">CSV Export</a></p>
       <table>
-        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th><th>${escapeHtml(lang === "vi" ? "Hiện Card" : "카드")}</th></tr></thead>
+        <thead><tr><th>${escapeHtml(L.colSortOrder)}</th><th>${escapeHtml(L.fieldLabel)}</th><th>${escapeHtml(L.colLabelEn)}</th><th>${escapeHtml(L.colLabelVi)}</th><th>${escapeHtml(L.fieldInputType)}</th><th>${escapeHtml(L.colOptions)}</th><th>${escapeHtml(L.dependsOnLabel)}</th><th>${escapeHtml(lang === "vi" ? "Phạm vi" : "범위")}</th><th>${escapeHtml(lang === "vi" ? "Kiểu Card" : "카드")}</th><th>${escapeHtml(lang === "vi" ? "Bắt buộc" : "필수")}</th></tr></thead>
         <tbody>${rows || `<tr><td colspan="7" class="muted">${escapeHtml(L.noItems)}</td></tr>`}</tbody>
       </table>
     </div>` }));
@@ -392,11 +408,13 @@ export async function handleDailyFieldCreate(request, env, user) {
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || RETIRED_DAILY_FIELDS.has(name) || label === "LOTID" || name === "LOTID")) return plainText(lotWords[getLang(request)].retired, 400);
 
   const isRequired = form.get("is_required") === "on" || form.get("is_required") === "1" ? 1 : 0;
-  const showInCard = form.has("show_in_card") ? (form.get("show_in_card") === "on" || form.get("show_in_card") === "1" ? 1 : 0) : 1;
+  const fieldScope = ["item", "update", "both"].includes(String(form.get("field_scope"))) ? String(form.get("field_scope")) : "both";
+  const cardPosition = ["badge", "highlight", "body", "hidden"].includes(String(form.get("card_position"))) ? String(form.get("card_position")) : "body";
+  const showInCard = cardPosition === "hidden" ? 0 : 1;
   const max = await env.DB.prepare(`SELECT COALESCE(MAX(sort_order), 0) AS m FROM tech_daily_field`).first();
   await env.DB.prepare(
-    `INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order, depends_on_field_id, is_required, show_in_card) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(label, labelEn, labelVi, inputType, (max.m || 0) + 10, dependsOnFieldId, isRequired, showInCard).run();
+    `INSERT INTO tech_daily_field (label, label_en, label_vi, input_type, sort_order, depends_on_field_id, is_required, show_in_card, field_scope, card_position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(label, labelEn, labelVi, inputType, (max.m || 0) + 10, dependsOnFieldId, isRequired, showInCard, fieldScope, cardPosition).run();
 
   return redirect("/daily-fields");
 }
@@ -546,14 +564,29 @@ export async function pageDailyFieldDetail(request, env, user, id) {
           sync();
         })();
         </script>
+        <div class="row" style="margin:12px 0;">
+          <div>
+            <label style="font-weight:600;">${escapeHtml(lang === "vi" ? "Phạm vi hiển thị (Form)" : "적용 범위")}</label>
+            <select name="field_scope">
+              <option value="both" ${field.field_scope === "both" || !field.field_scope ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Cả hai (Tạo mục & Cập nhật tiến độ)" : "전체 (항목 등록 & 진척 보고)")}</option>
+              <option value="item" ${field.field_scope === "item" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Cố định khi tạo mục mới (Sản phẩm, Part No...)" : "새 항목 등록 시 고정 정보")}</option>
+              <option value="update" ${field.field_scope === "update" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Tiến độ hàng ngày (Trạng thái, Công đoạn, Số lượng...)" : "일일 진척 보고 시에만 입력")}</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight:600;">${escapeHtml(lang === "vi" ? "Card Designer (Vị trí trên Card)" : "카드 표시 스타일")}</label>
+            <select name="card_position">
+              <option value="body" ${field.card_position === "body" || !field.card_position ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Khối nội dung chính (Dòng chuẩn)" : "본문 일반 내용")}</option>
+              <option value="badge" ${field.card_position === "badge" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Huy hiệu nhỏ / Tag (Góc trên)" : "상단 뱃지/태그")}</option>
+              <option value="highlight" ${field.card_position === "highlight" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Dòng nổi bật (Chữ to, đậm)" : "강조 텍스트 (굵은 글씨)")}</option>
+              <option value="hidden" ${field.card_position === "hidden" ? "selected" : ""}>${escapeHtml(lang === "vi" ? "Ẩn khỏi mặt Card (Chỉ xem khi mở chi tiết)" : "카드 숨김 (상세 보기에서만 표시)")}</option>
+            </select>
+          </div>
+        </div>
         <div style="display:flex;gap:20px;align-items:center;margin:12px 0;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
             <input type="checkbox" name="is_required" ${field.is_required ? "checked" : ""} style="width:auto;margin:0;">
             <span>${escapeHtml(lang === "vi" ? "Bắt buộc nhập" : lang === "en" ? "Required" : "필수 입력")}</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
-            <input type="checkbox" name="show_in_card" ${field.show_in_card !== 0 ? "checked" : ""} style="width:auto;margin:0;">
-            <span>${escapeHtml(lang === "vi" ? "Hiển thị trên Card báo cáo" : lang === "en" ? "Show in Report Card" : "보고서 카드에 표시")}</span>
           </label>
         </div>
         <div style="margin-top:12px;"><button type="submit">${escapeHtml(L.save)}</button></div>
@@ -633,9 +666,11 @@ export async function handleDailyFieldUpdate(request, env, user, id) {
   if (hasDailyClassification((await loadDailyFields(env)).fields) && (RETIRED_DAILY_FIELDS.has(label) || label === "LOTID")) return plainText(lotWords[lang].retired, 400);
 
   const isRequired = form.get("is_required") === "on" || form.get("is_required") === "1" ? 1 : 0;
-  const showInCard = form.has("show_in_card") ? (form.get("show_in_card") === "on" || form.get("show_in_card") === "1" ? 1 : 0) : 1;
-  await env.DB.prepare(`UPDATE tech_daily_field SET label = ?, label_en = ?, label_vi = ?, input_type = ?, depends_on_field_id = ?, is_required = ?, show_in_card = ? WHERE id = ?`)
-    .bind(label, labelEn, labelVi, inputType, dependsOnFieldId, isRequired, showInCard, id).run();
+  const fieldScope = ["item", "update", "both"].includes(String(form.get("field_scope"))) ? String(form.get("field_scope")) : "both";
+  const cardPosition = ["badge", "highlight", "body", "hidden"].includes(String(form.get("card_position"))) ? String(form.get("card_position")) : "body";
+  const showInCard = cardPosition === "hidden" ? 0 : 1;
+  await env.DB.prepare(`UPDATE tech_daily_field SET label = ?, label_en = ?, label_vi = ?, input_type = ?, depends_on_field_id = ?, is_required = ?, show_in_card = ?, field_scope = ?, card_position = ? WHERE id = ?`)
+    .bind(label, labelEn, labelVi, inputType, dependsOnFieldId, isRequired, showInCard, fieldScope, cardPosition, id).run();
 
   // 이 필드가 더 이상 select 타입이 아니면, 이 필드에 의존하던 다른 필드들은 상위 항목을 잃는다.
   if (inputType !== "select") {

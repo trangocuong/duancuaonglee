@@ -71,7 +71,7 @@ export async function pageDailyItems(request, env, user) {
     ...fields.filter((field) => !((lang === "en" && field.label_en) || (lang === "vi" && field.label_vi))).map((field) => field.label),
     ...fields.flatMap((field) => field.options.map((option) => option.value)),
   ], lang) : new Map();
-  const reportInputs = combinedEntry ? fields.map((field) => `
+  const reportInputs = combinedEntry ? fields.filter(f => f.field_scope !== "update").map((field) => `
     <div><label>${escapeHtml(resolveFieldLabel(field, lang, fieldTranslations))}</label>
     ${renderFieldInput(field, L, "", optionValueById, lang, fieldTranslations, combinedEntry)}</div>`).join("\n") : "";
 
@@ -243,14 +243,14 @@ export async function pageDailyItemDetail(request, env, user, id) {
 
   const combinedEntry = hasDailyClassification(fields);
   const today = new Date().toISOString().slice(0, 10);
-  const fieldInputs = activeDailyFields(fields).map((f) => `
+  const fieldInputs = activeDailyFields(fields).filter(f => f.field_scope !== "item").map((f) => `
         <div><label>${escapeHtml(resolveFieldLabel(f, lang, detailTranslations))}</label>
         ${renderFieldInput(f, L, "", optionValueById, lang, detailTranslations, combinedEntry)}</div>`).join("\n");
   const itemTitle = translatedText(item.title, detailTranslations);
 
   return html(layout({
     title: `${item.part} · ${itemTitle}`, user, lang, activeNav: "daily", mainClass: "daily-work-page", body: `
-    <p class="daily-back"><a href="/daily-items">${escapeHtml(L.backToList)}</a></p>
+    <p class="daily-back"><a href="/daily-reports">← ${escapeHtml(lang === "vi" ? "Quay lại Báo cáo" : L.backToList)}</a></p>
     <div class="card daily-item-head${item.closed_at ? " is-closed" : ""}">
       <div class="daily-item-title">
         <h2>${escapeHtml(item.part)} · ${escapeHtml(itemTitle)}</h2>

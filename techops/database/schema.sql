@@ -145,6 +145,8 @@ CREATE TABLE IF NOT EXISTS tech_daily_field (
   depends_on_field_id INTEGER REFERENCES tech_daily_field(id) ON DELETE SET NULL,
   is_required INTEGER NOT NULL DEFAULT 0,
   show_in_card INTEGER NOT NULL DEFAULT 1,
+  field_scope TEXT NOT NULL DEFAULT 'both' CHECK (field_scope IN ('item','update','both')),
+  card_position TEXT NOT NULL DEFAULT 'body' CHECK (card_position IN ('badge','highlight','body','hidden')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

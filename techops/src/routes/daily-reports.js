@@ -47,10 +47,14 @@ export async function pageDailyReports(request, env, user) {
     const sql = selectedPart === "all"
       ? `SELECT u.id, u.report_date, u.created_at, i.id AS item_id, i.part, i.category, i.title, i.owner
            FROM tech_daily_update u JOIN tech_daily_item i ON i.id = u.item_id
-          WHERE u.report_date = ? ORDER BY i.part, i.category, i.title`
+          WHERE u.id IN (
+            SELECT MAX(u2.id) FROM tech_daily_update u2 WHERE u2.report_date = ? GROUP BY u2.item_id
+          ) ORDER BY i.part, i.category, i.title`
       : `SELECT u.id, u.report_date, u.created_at, i.id AS item_id, i.part, i.category, i.title, i.owner
            FROM tech_daily_update u JOIN tech_daily_item i ON i.id = u.item_id
-          WHERE u.report_date = ? AND i.part = ? ORDER BY i.category, i.title`;
+          WHERE u.id IN (
+            SELECT MAX(u2.id) FROM tech_daily_update u2 JOIN tech_daily_item i2 ON i2.id = u2.item_id WHERE u2.report_date = ? AND i2.part = ? GROUP BY u2.item_id
+          ) ORDER BY i.category, i.title`;
     const params = selectedPart === "all" ? [date] : [date, selectedPart];
     const result = await env.DB.prepare(sql).bind(...params).all();
     return result.results.length ? attachFieldValues(env, lang, result.results) : [];
@@ -77,6 +81,7 @@ export async function pageDailyReports(request, env, user) {
        FROM tech_daily_item i WHERE i.closed_at IS NULL`
   ).all();
 
+  const { fields: allFields } = await loadDailyFields(env);
   const [reports, liveUpdates, openItems] = await Promise.all([
     reportsQuery,
     loadLiveUpdatesForDate(selectedDate),
@@ -126,7 +131,15 @@ export async function pageDailyReports(request, env, user) {
     const rolloverRes = await env.DB.prepare(rolloverSql).bind(...unrepIds).all();
     if (rolloverRes.results.length) {
       const attached = await attachFieldValues(env, lang, rolloverRes.results);
-      rolloverUpdates = attached.map((u) => ({ ...u, isUnreportedToday: true }));
+      rolloverUpdates = attached
+        .map((u) => ({ ...u, isUnreportedToday: true }))
+        .filter((u) => {
+          const rawFields = getUpdateRawFieldMap(u);
+          const fields = getUpdateFieldMap(u);
+          const rawStatus = firstDailyValue(rawFields, "상태") || u.rawStatusValue || "";
+          const status = firstDailyValue(fields, "상태") || u.statusValue || rawStatus;
+          return !isDoneStatus(rawStatus) && status !== "COMPLETED" && status !== "완료" && status !== "DONE";
+        });
     }
   }
   const detailCell = (text) => text
@@ -139,7 +152,14 @@ export async function pageDailyReports(request, env, user) {
   const renderPartSection = (part) => {
     const liveToday = liveUpdates.filter((u) => u.part === part);
     const rollover = (selectedDate === todayStr) ? rolloverUpdates.filter((u) => u.part === part) : [];
-    const live = [...liveToday, ...rollover];
+    const seenItems = new Set();
+    const live = [];
+    for (const item of [...liveToday, ...rollover]) {
+      if (!seenItems.has(item.item_id)) {
+        seenItems.add(item.item_id);
+        live.push(item);
+      }
+    }
     const archive = reports.results.filter((r) => r.part === part);
     if (!live.length && !archive.length) return "";
 
@@ -152,15 +172,39 @@ export async function pageDailyReports(request, env, user) {
       const issue = firstDailyValue(fields, "이슈/조치내용", "이슈 및 조치내용");
       const remark = firstDailyValue(fields, "비고");
       const statusClass = isIssueStatus(rawStatus) ? "issue" : isDoneStatus(rawStatus) ? "done" : "";
+
+      // Group fields by card position
+      const badges = [];
+      const highlights = [];
+      const extraBodies = [];
+      for (const fv of (u.fieldValues || [])) {
+        const fieldMeta = allFields.find(f => f.id == fv.fieldId || f.label === fv.key);
+        const pos = fieldMeta?.card_position || "body";
+        if (pos === "badge") {
+          badges.push(`<span class="status-pill" style="background:var(--accent-soft);color:var(--accent-soft-text);border:1px solid var(--border);padding:2px 8px;font-size:12px;">${escapeHtml(fv.label)}: <strong>${escapeHtml(fv.value)}</strong></span>`);
+        } else if (pos === "highlight") {
+          highlights.push(`<div style="font-size:14px;font-weight:600;color:var(--accent);margin:4px 0;">${escapeHtml(fv.label)}: ${escapeHtml(fv.value)}</div>`);
+        } else if (pos === "body" && !["상태", "작업내용", "이슈/조치내용", "비고"].includes(fv.key)) {
+          extraBodies.push(`<p class="daily-content" style="margin:2px 0;"><strong>${escapeHtml(fv.label)}</strong> · ${escapeHtml(fv.value)}</p>`);
+        }
+      }
+
       return `<article class="daily-overview${statusClass ? ` is-${statusClass}` : ""} no-print">
-        <div class="daily-overview-head"><div class="daily-overview-title"><div class="muted">${escapeHtml(resolveOptionValue(u.category || "-", lang, reportTextTranslations))}${fields["제품"] ? ` · ${escapeHtml(fields["제품"])}` : ""}</div>
-        <h4><a href="/daily-items/${u.item_id}">${escapeHtml(translatedText(u.title, reportTextTranslations))}</a></h4></div>
-        <div class="daily-overview-meta">
-          ${u.isUnreportedToday ? `<span class="status-pill" style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;">⚠️ ${escapeHtml(lang === "vi" ? "Chưa cập nhật hôm nay" : "오늘 미보고")}</span>` : `<span class="status-pill ${statusClass}">${escapeHtml(status)}</span>`}
-          <span class="muted">${escapeHtml(L.colAssignee)} · ${escapeHtml(u.owner || "-")}</span>
-          <span class="muted" style="font-size:12px;">🕒 ${escapeHtml(u.report_date)}${u.created_at ? ` (${u.created_at.slice(11, 16)})` : ""}</span>
-        </div></div>
+        <div class="daily-overview-head">
+          <div class="daily-overview-title">
+            <div class="muted">${escapeHtml(resolveOptionValue(u.category || "-", lang, reportTextTranslations))}${fields["제품"] ? ` · ${escapeHtml(fields["제품"])}` : ""}</div>
+            <h4><a href="/daily-items/${u.item_id}">${escapeHtml(translatedText(u.title, reportTextTranslations))}</a></h4>
+          </div>
+          <div class="daily-overview-meta">
+            ${u.isUnreportedToday ? `<span class="status-pill" style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;">⚠️ ${escapeHtml(lang === "vi" ? "Chưa cập nhật hôm nay" : "오늘 미보고")}</span>` : `<span class="status-pill ${statusClass}">${escapeHtml(status)}</span>`}
+            <span class="muted">${escapeHtml(L.colAssignee)} · ${escapeHtml(u.owner || "-")}</span>
+            <span class="muted" style="font-size:12px;">🕒 ${escapeHtml(u.report_date)}${u.created_at ? ` (${u.created_at.slice(11, 16)})` : ""}</span>
+          </div>
+        </div>
+        ${badges.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;">${badges.join("")}</div>` : ""}
+        ${highlights.join("")}
         ${work ? `<p class="daily-content">${escapeHtml(work)}</p>` : ""}
+        ${extraBodies.join("")}
         ${issue ? `<p class="daily-content daily-issue"><strong>${escapeHtml(L.colIssueAction)}</strong> · ${escapeHtml(issue)}</p>` : ""}
         ${remark ? `<p class="daily-content muted"><strong>${escapeHtml(L.colRemark)}</strong> · ${escapeHtml(remark)}</p>` : ""}
         <details class="daily-field-details"><summary>${escapeHtml(U.details)}</summary><dl>${(u.fieldValues || []).map(f => `<div><dt>${escapeHtml(f.label)}</dt><dd>${escapeHtml(f.value)}</dd></div>`).join("")}</dl></details>
@@ -258,7 +302,7 @@ export async function pageDailyReports(request, env, user) {
     ${dailyWorkSubtabs(L, "report", user)}
     <header class="daily-heading">
       <div><h2>${escapeHtml(L.dailyReportsHeading)}</h2><p class="muted no-print">${escapeHtml(U.intro)}</p></div>
-      <a class="daily-primary no-print" href="/daily-items">${escapeHtml(U.write)}</a>
+      <a class="daily-primary no-print" href="/daily-items">+ ${escapeHtml(lang === "vi" ? "Tạo công việc mới" : U.write)}</a>
     </header>
     <div class="card daily-toolbar no-print">
       <form method="get" action="/daily-reports" class="daily-filter">
