@@ -16,7 +16,7 @@ if (isNewDb) {
     INSERT INTO techops_users (username, password_hash, password_salt, display_name, role, email_verified_at)
     VALUES 
       ('preview@local', 'preview', 'preview', '미리보기 관리자', 'admin', datetime('now')),
-      ('admin@hanyangdgtvina.com', 'FSizwwX0SNpQtxbuQnS/7dUHaxBX7BrIJAjB70rWKGA=', 'wGbjxFEL5wBhVxq8t+ZyyA==', 'Quản trị viên Hệ thống', 'admin', datetime('now'));
+      ('admin@hanyangdgtvina.com', 'i+FrY3qN4GgAxsNrShEmCw7UO86wGaVeKi5QMSy6g2Y=', '41czqzvoxeFBuX+jIP3IYg==', 'Quản trị viên Hệ thống', 'admin', datetime('now'));
     INSERT INTO techops_sessions (id, user_id, expires_at)
     VALUES ('preview-session', 1, datetime('now', '+1 day'));
   `);
@@ -28,7 +28,7 @@ if (isNewDb) {
   if (!realAdmin) {
     db.prepare(`
       INSERT INTO techops_users (username, password_hash, password_salt, display_name, role, email_verified_at)
-      VALUES ('admin@hanyangdgtvina.com', 'FSizwwX0SNpQtxbuQnS/7dUHaxBX7BrIJAjB70rWKGA=', 'wGbjxFEL5wBhVxq8t+ZyyA==', 'Quản trị viên Hệ thống', 'admin', datetime('now'))
+      VALUES ('admin@hanyangdgtvina.com', 'i+FrY3qN4GgAxsNrShEmCw7UO86wGaVeKi5QMSy6g2Y=', '41czqzvoxeFBuX+jIP3IYg==', 'Quản trị viên Hệ thống', 'admin', datetime('now'))
     `).run();
   }
 }

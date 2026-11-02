@@ -85,7 +85,7 @@ npm run start:lan
 
 ### B. Tài khoản quản trị mặc định
 * **Tài khoản**: `admin@hanyangdgtvina.com`
-* **Mật khẩu mặc định**: `Ong123`
+* **Mật khẩu mặc định**: `AdminPassword123!`
 *(Khuyến nghị đổi mật khẩu sau khi bàn giao thông qua nút Hồ sơ cá nhân ở góc trên bên phải).*
 
 ### C. Sao lưu dữ liệu định kỳ (Backup Database)
@@ -113,3 +113,4 @@ Toàn bộ các bộ kiểm thử (Unit test, Integration test, Regression test)
 * `techops/src/i18n/`: Thư mục từ điển đa ngôn ngữ (`auth.js`, `common.js`, `daily.js`, `master.js`, `nav.js`).
 * `techops/database/schema.sql`: Toàn bộ cấu trúc bảng cơ sở dữ liệu.
 * `techops/techops_local.db`: Tệp tin cơ sở dữ liệu SQLite thực tế đang chạy.
+
